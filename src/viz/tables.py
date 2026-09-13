@@ -173,3 +173,67 @@ def descriptive_statistics(df: pl.DataFrame) -> pd.DataFrame:
 
     logger.info("Descriptive statistics table: %d rows", table.height)
     return table.to_pandas()
+
+
+MODEL_LABELS = {
+    "Polynomial_Regression": (
+        r"\parbox[t]{5cm}{\linespread{1}\selectfont{Second-degree}\\{Polynomial Regression}}"
+    )
+}
+"""LaTeX labels for models whose name does not typeset directly."""
+
+
+def _metric_cell(row: dict, bold: bool) -> str:
+    """Render one model's three metrics as a LaTeX ``\\parbox``.
+
+    Args:
+        row: Mapping with ``r2``, ``mae`` and ``rmse``.
+        bold: Whether to wrap each metric in ``\\boldsymbol``.
+
+    Returns:
+        The ``\\parbox`` source for one table cell.
+    """
+    metrics = [
+        f"R^{{2}} = {row['r2']:.3f}",
+        f"MAE={row['mae']:.3f}",
+        f"RMSE={row['rmse']:.3f}",
+    ]
+    rendered = [f"{{${rf'\boldsymbol{{{m}}}' if bold else m}$}}" for m in metrics]
+    return r"\parbox[t]{3cm}{\linespread{1}\selectfont" + r"\\".join(rendered) + "}"
+
+
+def regression_latex_table(results: pl.DataFrame, highlight: str = "CatBoost") -> str:
+    """Render the regression results as the body of the thesis table.
+
+    In the legacy project this markup was applied by hand to the exported
+    spreadsheet, which meant the published table could not be regenerated from
+    the code (``docs/audit.md`` F24). Generating it here closes that gap.
+
+    Args:
+        results: Tidy results from
+            :func:`src.models.regression.evaluate_feature_sets`, with columns
+            ``model``, ``feature_set``, ``r2``, ``mae`` and ``rmse``.
+        highlight: Model whose row is set in bold, normally the best performer.
+
+    Returns:
+        One ``&``-separated LaTeX row per model, newline separated, each ending
+        in ``\\\\``.
+    """
+    feature_sets = list(dict.fromkeys(results["feature_set"].to_list()))
+    lines = []
+    for model in dict.fromkeys(results["model"].to_list()):
+        bold = model == highlight
+        label = MODEL_LABELS.get(model, rf"\textbf{{{model}}}" if bold else model)
+        cells = [
+            _metric_cell(
+                results.filter(
+                    (pl.col("model") == model) & (pl.col("feature_set") == feature_set)
+                ).to_dicts()[0],
+                bold,
+            )
+            for feature_set in feature_sets
+        ]
+        lines.append(" & ".join([label, *cells]) + r" \\")
+
+    logger.info("Rendered LaTeX table with %d rows", len(lines))
+    return "\n".join(lines)
