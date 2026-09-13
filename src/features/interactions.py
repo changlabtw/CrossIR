@@ -26,7 +26,7 @@ EXCLUDED_FROM_INTERACTIONS = [
 """Columns that are kept as features but never combined into interactions.
 
 Identifiers and the target are excluded for obvious reasons. ``SEX``, ``AGE`` and
-``RACE`` are excluded because products and ratios of a categorical code carry no
+``RACE`` are excluded because products and ratios of a demographic code carry no
 interpretable meaning.
 
 Note:
@@ -40,7 +40,7 @@ Note:
 
 def generate_interactions(
     df: pl.DataFrame,
-    race: int,
+    race: int = 1,
     exclude: list[str] | None = None,
 ) -> pl.DataFrame:
     """Add a cohort code, then all unary and pairwise interaction features.
@@ -52,10 +52,11 @@ def generate_interactions(
 
     Args:
         df: Cleaned cohort table.
-        race: Value written to the ``RACE`` column. This encodes the *source
-            dataset*, not participant ethnicity: ``1`` for NHANES, ``2`` for
-            KNHANES. Taiwan Biobank is scored as ``2`` because it is passed
-            through the same code path as KNHANES.
+        race: Value written to the ``RACE`` column, a coarse ancestry grouping
+            of the cohort: ``1`` for the US cohort (NHANES) and ``2`` for the
+            East Asian cohorts (KNHANES and Taiwan Biobank). Defaults to ``1``
+            in the legacy code, which is why the feature-ablation runs carry
+            ``RACE = 1`` on Korean data (``docs/audit.md`` F23).
         exclude: Columns not to build interactions from. Defaults to
             :data:`EXCLUDED_FROM_INTERACTIONS`.
 
