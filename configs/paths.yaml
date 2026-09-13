@@ -15,3 +15,4 @@ output_root: data/output
 # Used only by src/validate.py. Not required to run the pipeline.
 reference_processed_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/processed
 reference_results_root: /Users/srwang/Research/InsulinResistancePredictiveModel/results
+reference_output_root: /Users/srwang/Research/InsulinResistancePredictiveModel/img

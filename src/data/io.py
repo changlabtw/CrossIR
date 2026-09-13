@@ -102,6 +102,22 @@ def processed_path(name: str) -> Path:
     return root / name
 
 
+def output_path(name: str) -> Path:
+    """Build a path inside ``data/output`` and create the directory.
+
+    ``data/output`` holds the committed figures and result tables.
+
+    Args:
+        name: File name, e.g. ``"stats.xlsx"``.
+
+    Returns:
+        Absolute path to the file (which need not exist yet).
+    """
+    root = repo_path("output_root")
+    root.mkdir(parents=True, exist_ok=True)
+    return root / name
+
+
 def write_parquet(df: pl.DataFrame, path: str | Path) -> Path:
     """Write a DataFrame to parquet, creating the parent directory.
 
