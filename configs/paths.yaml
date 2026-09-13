@@ -1,0 +1,17 @@
+# Filesystem locations used by the pipeline.
+#
+# `raw_data_root` points at the raw cohort files. It is read in place rather than
+# copied into this repository: the raw tree is 2.6 GB and is never modified by any
+# code here. Repoint this key if the data lives elsewhere on your machine.
+#
+# Every file this pipeline writes goes under `processed_root` or `output_root`,
+# both of which are inside this repository.
+
+raw_data_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/raw
+processed_root: data/processed
+output_root: data/output
+
+# Read-only ground truth for the Phase 2 validation gates (legacy project output).
+# Used only by src/validate.py. Not required to run the pipeline.
+reference_processed_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/processed
+reference_results_root: /Users/srwang/Research/InsulinResistancePredictiveModel/results
