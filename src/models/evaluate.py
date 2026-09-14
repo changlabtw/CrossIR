@@ -133,3 +133,55 @@ def score_external(model, df, target: str = "IR", threshold: float = DECISION_TH
         "External scoring on %d samples: AUC=%.3f", len(y_true), metrics["roc_auc"]
     )
     return metrics
+
+
+def contributing_feature_ratio(model, feature_names: list[str], X=None) -> dict:
+    """Fraction of the input features the model actually uses.
+
+    Defined in the thesis as the number of features with importance above zero
+    over the number of input features, to weigh model performance against how
+    efficiently the feature set is used.
+
+    Note:
+        Features that are constant across the cohort are excluded from both
+        counts. A constant column cannot contribute by construction, so counting
+        it as a non-contributing feature penalises the model for a column that
+        carries no information. In this project ``RACE`` is constant within any
+        single cohort and is the only such column. The published table applied
+        this exclusion to three of its four cells and not to the fourth
+        (``docs/audit.md`` F29); here it is applied consistently.
+
+    Args:
+        model: Fitted estimator exposing ``feature_importances_``.
+        feature_names: Column names in the order the model was trained on.
+        X: Training matrix used to detect constant columns. When ``None``, no
+            column is treated as constant.
+
+    Returns:
+        Mapping with ``ratio`` (rounded to three decimals), ``contributing``,
+        ``total``, and ``constant_features`` -- the names that were excluded.
+    """
+    importances = np.asarray(model.feature_importances_)
+
+    constant = []
+    if X is not None:
+        constant = [name for name in feature_names if X[name].nunique(dropna=False) <= 1]
+
+    considered = [
+        index for index, name in enumerate(feature_names) if name not in constant
+    ]
+    contributing = int((importances[considered] > 0).sum())
+    total = len(considered)
+
+    logger.info(
+        "CFR: %d/%d contributing (%d constant column(s) excluded)",
+        contributing,
+        total,
+        len(constant),
+    )
+    return {
+        "ratio": round(contributing / total, METRIC_DECIMALS),
+        "contributing": contributing,
+        "total": total,
+        "constant_features": constant,
+    }

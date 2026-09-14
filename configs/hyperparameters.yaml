@@ -69,3 +69,36 @@ cross_ethnic:
       reg_lambda: 4.390077205727416
       subsample: 0.5472419423830137
       n_estimators: 1000
+
+# The pooled NHANES + KNHANES model (thesis Table `params2`).
+#
+# Provenance: 20250221121511_V30, the run that performed the search. The re-run
+# 20250221134053_V30 supplied these same values and produced a bit-identical model.
+# The top-20 retrain (V36) reuses the CatBoost block unchanged, as 3_retrain.ipynb does.
+pooled:
+  CatBoost:
+    colsample_bylevel: 0.988952150002474
+    learning_rate: 0.05334104091463987
+    max_depth: 4
+    reg_lambda: 4.064891190093774
+    n_estimators: 371
+  XGBoost:
+    colsample_bylevel: 0.7705116278265653
+    colsample_bytree: 0.8561047608958492
+    gamma: 2.943299234807691
+    learning_rate: 0.05738251336366502
+    max_depth: 3
+    min_child_weight: 2.1346238572994993
+    reg_alpha: 2.4588584119059576
+    reg_lambda: 9.947483549668672
+    subsample: 0.6693452036727958
+    n_estimators: 345
+  lightGBM:
+    colsample_bytree: 0.6693142586277608
+    learning_rate: 0.0154269489943585
+    max_depth: 3
+    min_child_weight: 1.2050402549382073
+    reg_alpha: 6.180080212802557
+    reg_lambda: 2.087143688667776
+    subsample: 0.504637785481733
+    n_estimators: 999

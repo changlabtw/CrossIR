@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 import seaborn as sns
+from sklearn.metrics import auc, precision_recall_curve, roc_auc_score, roc_curve
 
 logger = logging.getLogger(__name__)
 
@@ -202,3 +203,86 @@ def _save(path: str | Path) -> Path:
     plt.close()
     logger.info("Wrote %s", path)
     return path
+
+
+def plot_confusion_matrix(confusion: dict, title: str, path: str | Path) -> Path:
+    """Draw a confusion matrix as an annotated heatmap.
+
+    Args:
+        confusion: Mapping with ``TP``, ``TN``, ``FP`` and ``FN``, as returned by
+            :func:`src.models.evaluate.compute_metrics`.
+        title: Name of the model, used in the title.
+        path: Destination PNG path.
+
+    Returns:
+        The path written to.
+    """
+    matrix = np.array(
+        [[confusion["TN"], confusion["FP"]], [confusion["FN"], confusion["TP"]]]
+    )
+    labels = ["Negative", "Positive"]
+
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(
+        matrix,
+        annot=True,
+        fmt=",.0f",
+        cmap="Blues",
+        xticklabels=labels,
+        yticklabels=labels,
+        cbar=False,
+        annot_kws={"size": 16},
+    )
+    plt.title(f"Confusion Matrix: {title}", fontsize=16)
+    plt.xlabel("Predicted Label", fontsize=12)
+    plt.ylabel("True Label", fontsize=12)
+    plt.tight_layout()
+    return _save(path)
+
+
+def plot_roc_pr_curves(y_true, preds, title: str, path: str | Path) -> Path:
+    """Draw the ROC and precision-recall curves, stacked.
+
+    Both are shown because they answer different questions under class
+    imbalance: the ROC curve is insensitive to the number of negatives, the
+    precision-recall curve is not.
+
+    Args:
+        y_true: Observed binary labels.
+        preds: Predicted probability of the positive class.
+        title: Name of the model, used in the titles.
+        path: Destination PNG path.
+
+    Returns:
+        The path written to.
+    """
+    false_positive_rate, true_positive_rate, _ = roc_curve(y_true, preds)
+    roc_auc = roc_auc_score(y_true, preds)
+    precision, recall, _ = precision_recall_curve(y_true, preds)
+    pr_auc = auc(recall, precision)
+
+    _, axes = plt.subplots(2, 1, figsize=(7, 12), sharey=False, sharex=False)
+
+    axes[0].plot(
+        false_positive_rate,
+        true_positive_rate,
+        color="darkorange",
+        lw=2,
+        label=f"ROC curve (AUC = {roc_auc:.3f})",
+    )
+    axes[0].plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+    axes[0].set_xlabel("False Positive Rate")
+    axes[0].set_ylabel("True Positive Rate")
+    axes[0].set_title(f"ROC Curve: {title}")
+    axes[0].legend(loc="lower right")
+
+    axes[1].plot(
+        recall, precision, color="darkorange", lw=2, label=f"PR curve (AUC = {pr_auc:.3f})"
+    )
+    axes[1].set_xlabel("Recall")
+    axes[1].set_ylabel("Precision")
+    axes[1].set_title(f"Precision-Recall Curve: {title}")
+    axes[1].legend(loc="lower left")
+
+    plt.tight_layout()
+    return _save(path)
