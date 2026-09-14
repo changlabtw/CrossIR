@@ -1,8 +1,9 @@
-"""Classification metrics.
+"""Model evaluation.
 
 Reimplements the evaluation half of the legacy project's
 `scripts/model_training.py` (`InsulinResistancePredictor.evaluate_model`) as
-functions.
+functions, together with the two statistics used to judge predictions on a
+cohort that carries no observed label (`5_analysis.ipynb` cell [31]).
 
 Specificity, NPV and Youden's index are derived from the confusion matrix
 directly rather than through a library helper, matching the legacy arithmetic
@@ -135,6 +136,37 @@ def score_external(model, df, target: str = "IR", threshold: float = DECISION_TH
     return metrics
 
 
+def predict_labels(model, df, threshold: float = DECISION_THRESHOLD) -> np.ndarray:
+    """Predict binary labels for a cohort that carries no observed label.
+
+    The unlabelled counterpart of :func:`score_external`. Taiwan Biobank
+    measures no fasting insulin, so HOMA-IR and therefore the ``IR`` label
+    cannot be computed for it; the model supplies the label instead and no
+    performance metric is available.
+
+    Args:
+        model: Fitted classifier.
+        df: Feature table containing at least the model's own features. Extra
+            columns and a different column order are both fine, since columns
+            are selected by the model's feature names.
+        threshold: Probability above which a participant is labelled insulin
+            resistant.
+
+    Returns:
+        Array of ``0``/``1`` labels, one per row of ``df``, in row order.
+    """
+    X = df.select(model_feature_names(model)).to_pandas()
+    preds = model.predict_proba(X)[:, 1]
+    labels = (preds > threshold).astype(int)
+    logger.info(
+        "Predicted %d of %d rows positive (%.1f%%)",
+        int(labels.sum()),
+        len(labels),
+        100 * labels.mean(),
+    )
+    return labels
+
+
 def contributing_feature_ratio(model, feature_names: list[str], X=None) -> dict:
     """Fraction of the input features the model actually uses.
 
@@ -185,3 +217,26 @@ def contributing_feature_ratio(model, feature_names: list[str], X=None) -> dict:
         "total": total,
         "constant_features": constant,
     }
+
+
+def cohens_d(x, y) -> float:
+    """Standardised difference between the means of two independent samples.
+
+    Used to size the gap between a variable's distribution in the labelled
+    cohorts and in the Taiwan Biobank predicted-positive group, where no
+    classification metric is available. The pooled standard deviation uses the
+    sample estimator (``ddof=1``) in both groups.
+
+    Args:
+        x: First sample.
+        y: Second sample.
+
+    Returns:
+        Cohen's *d*. Positive when ``x`` has the larger mean. By the usual
+        convention, magnitudes near 0.2, 0.5 and 0.8 are small, medium and large.
+    """
+    x, y = np.asarray(x), np.asarray(y)
+    pooled_variance = (
+        (len(x) - 1) * x.std(ddof=1) ** 2 + (len(y) - 1) * y.std(ddof=1) ** 2
+    ) / (len(x) + len(y) - 2)
+    return (x.mean() - y.mean()) / np.sqrt(pooled_variance)

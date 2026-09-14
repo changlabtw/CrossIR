@@ -286,3 +286,107 @@ def plot_roc_pr_curves(y_true, preds, title: str, path: str | Path) -> Path:
 
     plt.tight_layout()
     return _save(path)
+
+
+TG_HDL_PANEL_LABELS = {
+    "NHANES + KNHANES": "NHANES\n+KNHANES",
+    "TWB (IR was predicted)": "TWB\n(IR was predicted)",
+}
+"""Panel titles that are wrapped onto two lines to fit the left margin."""
+
+
+def plot_tg_hdl_boxplots(frames: dict[str, pl.DataFrame], path: str | Path) -> Path:
+    """Compare the distribution of log(TG/HDL-C) by IR status across cohorts.
+
+    The triglyceride to HDL-cholesterol ratio is a widely used surrogate marker
+    of insulin resistance, so agreement between the labelled cohorts and the
+    Taiwan Biobank *predictions* is evidence that the predicted labels behave
+    like real ones. One stacked panel per cohort, sharing both axes.
+
+    Note:
+        The legacy implementation (`5_analysis.ipynb` cell [28]) passed the
+        NHANES frame for the panel titled ``KNHANES``, so the published figure
+        shows NHANES twice (`docs/audit.md` F2, decision D2). Here each panel
+        takes its own frame from ``frames``, which removes the possibility.
+
+    Args:
+        frames: Ordered mapping of panel title to a cohort table carrying ``TG``,
+            ``HDL_C`` and ``IR``. ``IR`` may be boolean or 0/1.
+        path: Destination PNG path.
+
+    Returns:
+        The path written to.
+    """
+    _, axes = plt.subplots(len(frames), 1, figsize=(8, 6), sharey=True, sharex=True)
+
+    for axis, (title, frame) in zip(axes, frames.items()):
+        data = frame.with_columns(
+            pl.when(pl.col("IR").cast(pl.Int64) == 1)
+            .then(pl.lit("IR+"))
+            .otherwise(pl.lit("IR-"))
+            .alias("IR"),
+            np.log(pl.col("TG") / pl.col("HDL_C")).alias("TG/HDL_C"),
+        )
+        sns.boxplot(
+            data=data.to_pandas(), y="IR", x="TG/HDL_C", hue="IR", ax=axis, notch=True
+        )
+        axis.set_ylabel(
+            TG_HDL_PANEL_LABELS.get(title, title),
+            rotation=0,
+            labelpad=2,
+            ha="right",
+            va="center",
+        )
+        axis.set_xlabel("log(TG/HDL-C)")
+
+    plt.tight_layout(rect=[0, 0, 1, 0.9])
+    plt.suptitle("Boxplot of log(TG/HDL-C) by IR and datasets", y=0.95)
+    return _save(path)
+
+
+def plot_quantile_comparison(
+    reference: np.ndarray,
+    comparison: np.ndarray,
+    labels: tuple[str, str],
+    title: str,
+    path: str | Path,
+) -> Path:
+    """Draw a two-sample Q-Q plot against the line of equality.
+
+    Both samples are evaluated at the same evenly spaced percentiles, as many of
+    them as there are observations in the smaller sample. Points on the dashed
+    ``y = x`` line mean the two distributions agree at that quantile.
+
+    Args:
+        reference: Sample plotted on the x axis.
+        comparison: Sample plotted on the y axis.
+        labels: Axis names for ``reference`` and ``comparison``; ``" Quantiles"``
+            is appended to each.
+        title: Figure title.
+        path: Destination PNG path.
+
+    Returns:
+        The path written to.
+    """
+    percentiles = np.linspace(0, 100, min(len(reference), len(comparison)))
+    reference_quantiles = np.percentile(reference, percentiles)
+    comparison_quantiles = np.percentile(comparison, percentiles)
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(
+        reference_quantiles,
+        comparison_quantiles,
+        color="blue",
+        s=10,
+        label="Quantile points",
+    )
+
+    low = min(reference_quantiles.min(), comparison_quantiles.min())
+    high = max(reference_quantiles.max(), comparison_quantiles.max())
+    plt.plot([low, high], [low, high], color="red", linestyle="--", label="y = x")
+
+    plt.xlabel(f"{labels[0]} Quantiles")
+    plt.ylabel(f"{labels[1]} Quantiles")
+    plt.title(title)
+    plt.legend()
+    return _save(path)
