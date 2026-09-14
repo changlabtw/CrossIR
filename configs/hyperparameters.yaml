@@ -1,0 +1,71 @@
+# Tuned hyperparameters.
+#
+# Found by Bayesian optimisation (15 initial points, 25 iterations, 5-fold
+# StratifiedKFold on AUC, with n_estimators capped at 1000 and early stopping after 50
+# rounds; the recorded n_estimators is the mean best iteration across folds).
+#
+# Provenance: transcribed from the `best_params` field of each legacy run's
+# results_<algorithm>.json, which is the only authoritative record of what the published
+# models were trained with. The literals pasted into
+# 1_bidirectional_train_model.ipynb cells [5] and [6] are residue from an earlier run and
+# were overwritten with None before training -- see docs/audit.md F25. These values are the
+# ones behind thesis Table `params1`, whose reg_lambda entry for the NHANES XGBoost model
+# is itself mistranscribed (F26); the value below is the one actually used.
+
+cross_ethnic:
+  # 20250221201739_V31
+  nhanes:
+    CatBoost:
+      colsample_bylevel: 0.5010369835298214
+      learning_rate: 0.013896845303534116
+      max_depth: 4
+      reg_lambda: 9.816163157195755
+      n_estimators: 973
+    XGBoost:
+      colsample_bylevel: 0.784294196475686
+      colsample_bytree: 0.7924409710166989
+      gamma: 4.187131517205855
+      learning_rate: 0.061852155667780524
+      max_depth: 3
+      min_child_weight: 15.67270854480409
+      reg_alpha: 2.422676201625513
+      reg_lambda: 8.821427542339709
+      subsample: 0.746467554108627
+      n_estimators: 177
+    lightGBM:
+      colsample_bytree: 0.5148411632771775
+      learning_rate: 0.0566698841576856
+      max_depth: 3
+      min_child_weight: 18.929669742998612
+      reg_alpha: 1.4795140398872182
+      reg_lambda: 5.575308902460772
+      subsample: 0.651155317862736
+      n_estimators: 192
+  # 20250221205627_V32
+  knhanes:
+    CatBoost:
+      colsample_bylevel: 0.9933601927668863
+      learning_rate: 0.03804865336883355
+      max_depth: 4
+      reg_lambda: 8.30372642360072
+      n_estimators: 373
+    XGBoost:
+      colsample_bylevel: 0.8385091730188209
+      colsample_bytree: 0.9908053535597743
+      gamma: 4.91489691007307
+      learning_rate: 0.019594260681045333
+      max_depth: 3
+      min_child_weight: 4.22872627755679
+      reg_alpha: 8.521213351518023
+      reg_lambda: 7.919578249182112
+      subsample: 0.6511148781872658
+      n_estimators: 699
+    lightGBM:
+      colsample_bytree: 0.7482994057278262
+      learning_rate: 0.011070024420168634
+      max_depth: 3
+      min_child_weight: 19.83702202193476
+      reg_alpha: 2.0035661474978714
+      reg_lambda: 4.390077205727416
+      subsample: 0.5472419423830137
+      n_estimators: 1000

@@ -16,8 +16,11 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import xgboost as xgb
+from bayes_opt import BayesianOptimization
 from catboost import CatBoostClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.ensemble import VotingClassifier
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import StratifiedKFold, train_test_split
 
 logger = logging.getLogger(__name__)
 
@@ -217,3 +220,149 @@ def split_frames(run: dict, target: str = TARGET) -> tuple[pl.DataFrame, pl.Data
     testing = pl.from_pandas(pd.concat([run["X_test"], run["y_test"]], axis=1))
     testing = testing.with_columns(preds=pl.Series(np.asarray(run["preds"])))
     return training, testing
+
+
+def build_voting_classifier(estimators: list[tuple[str, object]]) -> VotingClassifier:
+    """Combine fitted or unfitted estimators into a soft-voting ensemble.
+
+    Note:
+        ``VotingClassifier.fit`` clones every estimator and refits it, so the
+        result depends only on the estimators' hyperparameters and the training
+        data. The legacy ``EnsembleModel`` loaded already-fitted pickles from the
+        run folder and passed them here, which had the same effect; building the
+        estimators directly from configuration is equivalent and avoids the
+        pickle round-trip.
+
+    Args:
+        estimators: ``(name, estimator)`` pairs.
+
+    Returns:
+        An unfitted soft-voting classifier.
+    """
+    return VotingClassifier(estimators=estimators, voting="soft")
+
+
+def _parameter_bounds(algorithm: str) -> dict[str, tuple[float, float]]:
+    """Search space for the Bayesian optimisation, per algorithm.
+
+    Reproduced from `scripts/model_training.py` ``run()``. Only the parameters a
+    given library supports are included.
+
+    Args:
+        algorithm: ``"XGBoost"``, ``"lightGBM"`` or ``"CatBoost"``.
+
+    Returns:
+        Mapping of parameter name to ``(low, high)``.
+    """
+    bounds = {
+        "max_depth": (3, 12),
+        "learning_rate": (0.01, 0.2),
+        "reg_lambda": (0.001, 10),
+    }
+    if algorithm in ("XGBoost", "lightGBM"):
+        bounds["colsample_bytree"] = (0.5, 1)
+        bounds["min_child_weight"] = (1, 20)
+        bounds["subsample"] = (0.5, 1)
+        bounds["reg_alpha"] = (0.001, 10)
+    if algorithm in ("XGBoost", "CatBoost"):
+        bounds["colsample_bylevel"] = (0.5, 1)
+    if algorithm == "XGBoost":
+        bounds["gamma"] = (0, 5)
+    return bounds
+
+
+def _best_iteration(model, algorithm: str) -> int:
+    """Read the early-stopping iteration from a fitted model.
+
+    Args:
+        model: Fitted estimator.
+        algorithm: Which library it came from.
+
+    Returns:
+        The iteration at which training stopped improving.
+    """
+    if algorithm == "XGBoost":
+        return model.best_iteration
+    if algorithm == "lightGBM":
+        return model.best_iteration_
+    return model.tree_count_
+
+
+def tune_hyperparameters(
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    algorithm: str,
+    init_points: int = 15,
+    n_iter: int = 25,
+    n_splits: int = 5,
+    max_estimators: int = 1000,
+    early_stopping_rounds: int = 50,
+    random_state: int = RANDOM_STATE,
+) -> dict:
+    """Search for hyperparameters that maximise cross-validated AUC.
+
+    Each candidate is scored by 5-fold stratified cross-validation with early
+    stopping, and the number of trees reported for the winning candidate is the
+    mean iteration at which its folds stopped improving.
+
+    This is **not** on the default path. The published models were tuned once and
+    their parameters committed to ``configs/hyperparameters.yaml``; re-tuning is
+    provided so the search can be repeated, not so it runs on every execution.
+
+    Args:
+        X_train: Training feature matrix.
+        y_train: Training target.
+        algorithm: Which boosting library to tune.
+        init_points: Random probes before the surrogate model takes over.
+        n_iter: Guided iterations after the random probes.
+        n_splits: Cross-validation folds.
+        max_estimators: Tree cap during the search.
+        early_stopping_rounds: Patience within each fold.
+        random_state: Seed for the optimiser and the folds.
+
+    Returns:
+        The best parameters found, with ``max_depth`` and ``n_estimators`` as
+        integers.
+    """
+    integer_params = ("max_depth", "n_estimators")
+    history: list[list] = []
+
+    def objective(**candidate):
+        candidate = {
+            key: int(value) if isinstance(value, float) and key in integer_params else value
+            for key, value in candidate.items()
+        }
+        model = build_classifier(algorithm, y_train, candidate)
+        model.set_params(n_estimators=max_estimators, early_stopping_rounds=early_stopping_rounds)
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+        scores, iterations = [], []
+        for train_index, validation_index in cv.split(X_train, y_train):
+            X_fold, X_validation = X_train.iloc[train_index], X_train.iloc[validation_index]
+            y_fold, y_validation = y_train.iloc[train_index], y_train.iloc[validation_index]
+
+            if algorithm == "XGBoost":
+                model.fit(X_fold, y_fold, eval_set=[(X_validation, y_validation)], verbose=False)
+            else:
+                model.fit(X_fold, y_fold, eval_set=[(X_validation, y_validation)])
+
+            iterations.append(_best_iteration(model, algorithm))
+            scores.append(roc_auc_score(y_validation, model.predict_proba(X_validation)[:, 1]))
+
+        mean_score = float(np.mean(scores))
+        history.append([mean_score, int(np.mean(iterations)) if iterations else max_estimators])
+        return mean_score
+
+    optimizer = BayesianOptimization(
+        f=objective, pbounds=_parameter_bounds(algorithm), random_state=random_state
+    )
+    optimizer.maximize(init_points=init_points, n_iter=n_iter)
+
+    best = {
+        key: int(value) if key in integer_params else value
+        for key, value in optimizer.max["params"].items()
+    }
+    # The tree count comes from the best-scoring candidate's mean stopping point.
+    best["n_estimators"] = max(history, key=lambda row: row[0])[1]
+    logger.info("%s tuned: %s", algorithm, best)
+    return best

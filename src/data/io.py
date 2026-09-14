@@ -21,6 +21,7 @@ recorded as a deferred decision in ``docs/migration-plan.md`` (X3).
 
 _PATHS_CACHE: dict | None = None
 _COHORTS_CACHE: dict | None = None
+_HYPERPARAMETERS_CACHE: dict | None = None
 
 
 def repo_root() -> Path:
@@ -58,6 +59,20 @@ def load_cohorts() -> dict:
         with open(repo_root() / "configs" / "cohorts.yaml", encoding="utf-8") as handle:
             _COHORTS_CACHE = yaml.safe_load(handle)
     return _COHORTS_CACHE
+
+
+def load_hyperparameters() -> dict:
+    """Read and cache ``configs/hyperparameters.yaml``.
+
+    Returns:
+        Tuned hyperparameters per experiment, cohort and algorithm. See the file
+        header for their provenance.
+    """
+    global _HYPERPARAMETERS_CACHE
+    if _HYPERPARAMETERS_CACHE is None:
+        with open(repo_root() / "configs" / "hyperparameters.yaml", encoding="utf-8") as handle:
+            _HYPERPARAMETERS_CACHE = yaml.safe_load(handle)
+    return _HYPERPARAMETERS_CACHE
 
 
 def repo_path(key: str) -> Path:

@@ -81,3 +81,55 @@ def compute_metrics(
         "Youdens_Index": round(recall + specificity - 1, METRIC_DECIMALS),
         "pr_auc": round(pr_auc, METRIC_DECIMALS),
     }
+
+
+def model_feature_names(model) -> list[str]:
+    """Return the feature names a fitted model expects, in its own order.
+
+    The boosting libraries disagree on the attribute name: scikit-learn's
+    convention is ``feature_names_in_``, CatBoost uses ``feature_names_``.
+
+    Args:
+        model: Fitted estimator.
+
+    Returns:
+        Feature names in the order the model was trained on.
+
+    Raises:
+        AttributeError: If the model records no feature names.
+    """
+    if hasattr(model, "feature_names_in_"):
+        return list(model.feature_names_in_)
+    if hasattr(model, "feature_names_"):
+        return list(model.feature_names_)
+    raise AttributeError(f"{type(model).__name__} records no feature names")
+
+
+def score_external(model, df, target: str = "IR", threshold: float = DECISION_THRESHOLD) -> dict:
+    """Score a model against a cohort it was not trained on.
+
+    Columns are selected by the model's own feature names, so the external
+    cohort's table may hold them in a different order or alongside extra
+    columns.
+
+    Args:
+        model: Fitted classifier.
+        df: Feature table for the external cohort, including the target column.
+        target: Name of the target column.
+        threshold: Probability above which a prediction counts as positive.
+
+    Returns:
+        The output of :func:`compute_metrics`, with the predicted probabilities
+        added under ``preds``.
+    """
+    X = df.select(model_feature_names(model)).to_pandas()
+    preds = model.predict_proba(X)[:, 1]
+    y_true = df[target].to_numpy().astype(int)
+
+    metrics = compute_metrics(y_true, preds, threshold)
+    metrics["preds"] = preds
+    metrics["n_samples"] = len(y_true)
+    logger.info(
+        "External scoring on %d samples: AUC=%.3f", len(y_true), metrics["roc_auc"]
+    )
+    return metrics
