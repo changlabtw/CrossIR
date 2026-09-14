@@ -11,6 +11,15 @@ raw_data_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/raw
 processed_root: data/processed
 output_root: data/output
 
+# Per-sample DNA methylation tables, one parquet per participant.
+#
+# This is NOT the raw input. The raw input is an archive of per-sample text files
+# that lived on an external volume which is no longer available, so the extraction
+# step of stage 08 cannot be re-run; these per-sample tables are the earliest
+# reachable input. Taiwan Biobank methylation is restricted-access data in any
+# case and is not distributed with this repository. See README.md.
+methylation_samples_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/processed/MET
+
 # Read-only ground truth for the Phase 2 validation gates (legacy project output).
 # Used only by src/validate.py. Not required to run the pipeline.
 reference_processed_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/processed

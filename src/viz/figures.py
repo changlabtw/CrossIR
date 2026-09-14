@@ -390,3 +390,125 @@ def plot_quantile_comparison(
     plt.title(title)
     plt.legend()
     return _save(path)
+
+
+def plot_volcano(
+    df,
+    path: str | Path,
+    p_threshold: float = 0.05,
+    log2fc_threshold: float = 0.2,
+) -> Path:
+    """Draw a volcano plot of the per-probe differential methylation results.
+
+    Effect size on the x axis against statistical confidence on the y axis, so
+    that probes which are both large and reliable separate into the upper
+    corners. The dashed lines mark the two thresholds; points meeting both are
+    red.
+
+    Args:
+        df: Frame with ``log2_fc``, ``neg_log10_p`` and a boolean ``significant``,
+            as returned by :func:`src.methylation.differential.volcano_frame`.
+        path: Destination PNG path.
+        p_threshold: Adjusted p-value threshold, drawn as a horizontal line.
+        log2fc_threshold: Fold-change threshold, drawn as two vertical lines.
+
+    Returns:
+        The path written to.
+    """
+    data = df.to_pandas() if hasattr(df, "to_pandas") else df
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(
+        data["log2_fc"],
+        data["neg_log10_p"],
+        c=data["significant"].map({True: "red", False: "gray"}),
+        alpha=0.5,
+        s=40,
+        edgecolor=None,
+    )
+    plt.axvline(x=-log2fc_threshold, color="blue", linestyle="--", linewidth=1)
+    plt.axvline(x=log2fc_threshold, color="blue", linestyle="--", linewidth=1)
+    plt.axhline(y=-np.log10(p_threshold), color="green", linestyle="--", linewidth=1)
+
+    plt.title("Volcano plot of DNA methylation analysis", fontsize=16)
+    plt.xlabel("Log2 Fold Change", fontsize=14)
+    plt.ylabel("-Log10(q-value)", fontsize=14)
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    return _save(path)
+
+
+WRAPPED_TERM_MARKERS = ["Homo", "during"]
+"""Words before which a long pathway name is broken onto a second line."""
+
+
+def _wrap_term(term: str) -> str:
+    """Break a long pathway name onto separate lines at known marker words.
+
+    Each marker is applied in turn to the result of the previous one, so a name
+    containing several of them gains several line breaks. One term in this study
+    -- "Regulation of p27 Phosphorylation during Cell Cycle Progression Homo
+    sapiens h p27Pathway" -- carries both markers and wraps onto three lines.
+    """
+    for marker in WRAPPED_TERM_MARKERS:
+        if marker in term:
+            cut = term.rfind(" ", 0, term.find(marker))
+            if cut > 0:
+                term = term[:cut] + "\n" + term[cut + 1:]
+    return term
+
+
+def plot_enrichment_bars(results, path: str | Path, top_n: int = 3) -> Path:
+    """Draw the top enriched pathways of each gene-set library.
+
+    Args:
+        results: Enrichment table with ``Gene_set``, ``Term``, ``Combined Score``
+            and ``Adjusted P-value``, already filtered to the significant rows
+            and sorted by combined score.
+        path: Destination PNG path.
+        top_n: Pathways shown per library.
+
+    Returns:
+        The path written to.
+    """
+    import pandas as pd
+
+    top = pd.concat(
+        [
+            results[results["Gene_set"] == library].head(top_n)
+            for library in results["Gene_set"].unique()
+        ]
+    )
+    top = top.assign(Term=top["Term"].map(_wrap_term))
+
+    plt.figure(figsize=(18, 12))
+    palette = dict(
+        zip(top["Gene_set"].unique(), sns.color_palette("tab10", top["Gene_set"].nunique()))
+    )
+    axis = sns.barplot(x="Combined Score", y="Term", hue="Gene_set", data=top, palette=palette)
+
+    plt.title(
+        "Top3 significant enrichment pathway for each database (Adjust p-value < 0.05)",
+        fontweight="bold",
+        size=20,
+    )
+    plt.xlabel("Combined Score", fontweight="bold", size=15)
+    plt.ylabel("Pathway", fontweight="bold", size=15)
+    plt.legend(bbox_to_anchor=(0, -0.1), loc="center left", ncol=4, fontsize="x-large")
+    plt.xlim(right=2000)
+    plt.xticks(size=15)
+    plt.yticks(size=15)
+
+    terms = list(top["Term"])
+    for _, row in top.iterrows():
+        axis.text(
+            row["Combined Score"] + 10,
+            terms.index(row["Term"]),
+            f"{row['Combined Score']:.1f} (Adj. p: {row['Adjusted P-value']:.4g})",
+            va="center",
+            ha="left",
+            fontsize=12,
+        )
+
+    plt.tight_layout()
+    return _save(path)
