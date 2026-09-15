@@ -20,10 +20,12 @@ authors:
     family-names: Chen
     email: chensk@nccu.edu.tw
     affiliation: "Institute of Neuroscience, National Chengchi University, Taipei, Taiwan"
+    orcid: "https://orcid.org/0000-0002-0701-6799"
   - given-names: Jia-Ming
     family-names: Chang
     email: chang.jiaming@gmail.com
     affiliation: "Department of Computer Science and Institute of Neuroscience, National Chengchi University, Taipei, Taiwan"
+    orcid: "https://orcid.org/0000-0002-6711-1739"
 
 keywords:
   - insulin resistance
