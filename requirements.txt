@@ -1,7 +1,9 @@
-# Pinned from the `bio` conda environment (Python 3.12.8).
-# These versions are part of the reproduction contract: the metrics stored in the
-# legacy project are only guaranteed reachable under them.
-# Re-frozen from the live environment in Phase 3.
+# Python 3.12.8.
+#
+# These versions are part of the reproduction contract, not a lower bound. The
+# gradient boosting libraries are seeded only by their own defaults, so the
+# published metrics are guaranteed reachable under this exact set and not
+# necessarily under any other.
 
 polars==1.17.1
 pandas==2.2.3
@@ -23,6 +25,8 @@ gseapy==1.1.8
 matplotlib==3.9.4
 seaborn==0.13.2
 openpyxl==3.1.5
+pillow==11.0.0
 
 jupyterlab==4.3.4
 PyYAML==6.0.2
+requests==2.32.3

@@ -18,6 +18,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shap
 
+from src.data.io import display_path
+
 logger = logging.getLogger(__name__)
 
 TRANSFORM_SUFFIXES = ["log", "sqrt", "square"]
@@ -145,5 +147,5 @@ def plot_shap_summary(
     path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(path)
     plt.close()
-    logger.info("Wrote %s", path)
+    logger.info("Wrote %s", display_path(path))
     return path

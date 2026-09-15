@@ -22,3 +22,10 @@ catboost_info/
 
 # macOS
 .DS_Store
+
+# Machine-specific path overrides
+configs/paths.local.yaml
+
+# Internal working documents, not part of the published repository
+docs/
+CLAUDE.md

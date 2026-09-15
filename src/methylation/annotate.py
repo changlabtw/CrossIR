@@ -15,7 +15,7 @@ from pathlib import Path
 
 import polars as pl
 
-from src.data.io import repo_root
+from src.data.io import display_path, repo_root
 
 logger = logging.getLogger(__name__)
 
@@ -183,5 +183,5 @@ def write_probe_annotation(annotation: pl.DataFrame, path: Path | None = None) -
     """
     path = path or repo_root() / ANNOTATION_FILE
     annotation.write_csv(path)
-    logger.info("Wrote %s (%d rows)", path, annotation.height)
+    logger.info("Wrote %s (%d rows)", display_path(path), annotation.height)
     return path

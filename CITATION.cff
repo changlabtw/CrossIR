@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: "If you use this software or its results, please cite it as below."
+title: "Cross-ethnic machine learning prediction of insulin resistance in non-diabetic adults"
+abstract: >-
+  Analysis code for a gradient boosting model that predicts insulin resistance
+  (HOMA-IR > 2.5) in non-diabetic adults from routine clinical measurements,
+  trained on NHANES and KNHANES and applied to the Taiwan Biobank cohort, with
+  SHAP-based interpretation and a differential DNA methylation analysis of the
+  predicted groups.
+type: software
+license: MIT
+version: 1.0.0
+date-released: 2026-09-15
+
+authors:
+  - given-names: Shih-Ju
+    family-names: Wang
+    affiliation: "Department of Computer Science, National Chengchi University, Taipei, Taiwan"
+  - given-names: Shau-Kwaun
+    family-names: Chen
+    email: chensk@nccu.edu.tw
+    affiliation: "Institute of Neuroscience, National Chengchi University, Taipei, Taiwan"
+  - given-names: Jia-Ming
+    family-names: Chang
+    email: chang.jiaming@gmail.com
+    affiliation: "Department of Computer Science and Institute of Neuroscience, National Chengchi University, Taipei, Taiwan"
+
+keywords:
+  - insulin resistance
+  - HOMA-IR
+  - machine learning
+  - gradient boosting
+  - SHAP
+  - DNA methylation
+  - NHANES
+  - KNHANES
+  - Taiwan Biobank
+
+# Fill both in once the GitHub repository exists and Zenodo has minted the DOI.
+# repository-code: "https://github.com/<owner>/<repo>"
+# doi: "10.5281/zenodo.XXXXXXX"

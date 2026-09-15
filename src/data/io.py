@@ -34,7 +34,12 @@ def repo_root() -> Path:
 
 
 def load_paths() -> dict:
-    """Read and cache ``configs/paths.yaml``.
+    """Read and cache the path configuration.
+
+    ``configs/paths.yaml`` holds the committed defaults, which are relative to
+    the repository root. ``configs/paths.local.yaml`` is optional, git-ignored
+    and overrides those defaults key by key; it is where machine-specific
+    absolute paths belong, so that the committed configuration stays portable.
 
     Returns:
         Mapping of path keys to their configured values. Relative values are
@@ -42,8 +47,16 @@ def load_paths() -> dict:
     """
     global _PATHS_CACHE
     if _PATHS_CACHE is None:
-        with open(repo_root() / "configs" / "paths.yaml", encoding="utf-8") as handle:
-            _PATHS_CACHE = yaml.safe_load(handle)
+        configs = repo_root() / "configs"
+        with open(configs / "paths.yaml", encoding="utf-8") as handle:
+            paths = yaml.safe_load(handle)
+
+        local = configs / "paths.local.yaml"
+        if local.exists():
+            with open(local, encoding="utf-8") as handle:
+                paths.update(yaml.safe_load(handle) or {})
+
+        _PATHS_CACHE = paths
     return _PATHS_CACHE
 
 
@@ -86,9 +99,17 @@ def repo_path(key: str) -> Path:
         is relative.
 
     Raises:
-        KeyError: If the key is not present in the configuration file.
+        KeyError: If the key is not present in the configuration file, or is
+            present but unset. An unset key means the location it names is not
+            available on this machine; the message says where to set it.
     """
-    value = Path(load_paths()[key])
+    configured = load_paths()[key]
+    if configured is None:
+        raise KeyError(
+            f"{key!r} is not set. It has no default because it points outside "
+            f"this repository; set it in configs/paths.local.yaml."
+        )
+    value = Path(configured)
     return value if value.is_absolute() else repo_root() / value
 
 
@@ -131,6 +152,26 @@ def output_path(name: str) -> Path:
     root = repo_path("output_root")
     root.mkdir(parents=True, exist_ok=True)
     return root / name
+
+
+def display_path(path: str | Path) -> str:
+    """Render a path for logging, relative to the repository when possible.
+
+    Keeps absolute machine-specific prefixes out of log files and out of the
+    stored outputs of notebooks, which are committed.
+
+    Args:
+        path: Path to render.
+
+    Returns:
+        The path relative to the repository root, or unchanged if it lies
+        outside the repository.
+    """
+    path = Path(path)
+    try:
+        return str(path.relative_to(repo_root()))
+    except ValueError:
+        return str(path)
 
 
 def write_parquet(df: pl.DataFrame, path: str | Path) -> Path:

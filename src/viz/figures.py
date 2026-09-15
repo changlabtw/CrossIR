@@ -18,6 +18,8 @@ import polars as pl
 import seaborn as sns
 from sklearn.metrics import auc, precision_recall_curve, roc_auc_score, roc_curve
 
+from src.data.io import display_path
+
 logger = logging.getLogger(__name__)
 
 LOG_SCALED_FEATURES = ["SGOT", "SGPT", "TG", "CREATININE", "FASTING_GLUCOSE"]
@@ -201,7 +203,7 @@ def _save(path: str | Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(path)
     plt.close()
-    logger.info("Wrote %s", path)
+    logger.info("Wrote %s", display_path(path))
     return path
 
 

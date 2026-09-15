@@ -1,27 +1,33 @@
 # Filesystem locations used by the pipeline.
 #
-# `raw_data_root` points at the raw cohort files. It is read in place rather than
-# copied into this repository: the raw tree is 2.6 GB and is never modified by any
-# code here. Repoint this key if the data lives elsewhere on your machine.
+# Every value may be absolute, or relative to the repository root. The defaults
+# below assume the standard layout, so a fresh clone needs no edits to run once
+# the raw data is in place.
 #
-# Every file this pipeline writes goes under `processed_root` or `output_root`,
-# both of which are inside this repository.
+# To point the pipeline at data held elsewhere, create `configs/paths.local.yaml`
+# with just the keys you want to change. It is git-ignored, it overrides this
+# file key by key, and it is the right place for machine-specific absolute paths.
 
-raw_data_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/raw
+# Raw cohort files. Never written to by any code here. See the Data Availability
+# Statement in README.md for how to obtain each cohort.
+raw_data_root: data/raw
+
+# Everything the pipeline writes.
 processed_root: data/processed
 output_root: data/output
 
-# Per-sample DNA methylation tables, one parquet per participant.
+# Per-participant DNA methylation tables, one parquet per participant.
 #
 # This is NOT the raw input. The raw input is an archive of per-sample text files
-# that lived on an external volume which is no longer available, so the extraction
-# step of stage 08 cannot be re-run; these per-sample tables are the earliest
-# reachable input. Taiwan Biobank methylation is restricted-access data in any
-# case and is not distributed with this repository. See README.md.
-methylation_samples_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/processed/MET
+# that is both restricted-access and no longer on reachable media, so the
+# extraction step of stage 08 cannot be re-run; these per-sample tables are the
+# earliest reachable input. See README.md.
+methylation_samples_root: data/processed/MET
 
-# Read-only ground truth for the Phase 2 validation gates (legacy project output).
-# Used only by src/validate.py. Not required to run the pipeline.
-reference_processed_root: /Users/srwang/Research/InsulinResistancePredictiveModel/data/processed
-reference_results_root: /Users/srwang/Research/InsulinResistancePredictiveModel/results
-reference_output_root: /Users/srwang/Research/InsulinResistancePredictiveModel/img
+# Locations of the original analysis, used ONLY by src/validate.py to re-run the
+# validation gates in the notebooks. They are not needed to run the pipeline, and
+# are null here because that project is not distributed. Set them in
+# configs/paths.local.yaml to reproduce the gate comparisons.
+reference_processed_root: null
+reference_results_root: null
+reference_output_root: null
