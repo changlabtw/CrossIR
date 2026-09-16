@@ -1,14 +1,12 @@
 """Model evaluation.
 
-Reimplements the evaluation half of the legacy project's
-`scripts/model_training.py` (`InsulinResistancePredictor.evaluate_model`) as
-functions, together with the two statistics used to judge predictions on a
-cohort that carries no observed label (`5_analysis.ipynb` cell [31]).
+Classification metrics, together with the two statistics used to judge
+predictions on a cohort that carries no observed label.
 
 Specificity, NPV and Youden's index are derived from the confusion matrix
-directly rather than through a library helper, matching the legacy arithmetic
-exactly. Every value is rounded to three decimals, as the legacy code rounds
-before writing its JSON.
+directly rather than through a library helper, so that every reported quantity
+traces back to the same four counts. Values are rounded to three decimals, which
+is the precision at which they are reported.
 """
 
 import logging
@@ -28,7 +26,7 @@ DECISION_THRESHOLD = 0.5
 """Probability above which a participant is predicted insulin resistant."""
 
 METRIC_DECIMALS = 3
-"""Rounding applied to every reported metric, matching the legacy output."""
+"""Decimal places every reported metric is rounded to."""
 
 
 def compute_metrics(
@@ -170,18 +168,16 @@ def predict_labels(model, df, threshold: float = DECISION_THRESHOLD) -> np.ndarr
 def contributing_feature_ratio(model, feature_names: list[str], X=None) -> dict:
     """Fraction of the input features the model actually uses.
 
-    Defined in the thesis as the number of features with importance above zero
-    over the number of input features, to weigh model performance against how
-    efficiently the feature set is used.
+    The number of features with importance above zero over the number of input
+    features, which weighs model performance against how efficiently the feature
+    set is used.
 
     Note:
         Features that are constant across the cohort are excluded from both
         counts. A constant column cannot contribute by construction, so counting
         it as a non-contributing feature penalises the model for a column that
         carries no information. In this project ``RACE`` is constant within any
-        single cohort and is the only such column. The published table applied
-        this exclusion to three of its four cells and not to the fourth
-        (``docs/audit.md`` F29); here it is applied consistently.
+        single cohort and is the only such column.
 
     Args:
         model: Fitted estimator exposing ``feature_importances_``.

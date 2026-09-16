@@ -1,7 +1,7 @@
 """Taiwan Biobank cohort reader.
 
-Reimplements ``ClinicalDataProcessor`` from the legacy project's
-``scripts/data_processor.py`` as plain functions.
+Reads the survey and measurement tables, renames the variables onto the shared
+schema, and applies the cohort filters.
 
 Taiwan Biobank is restricted-access data: the raw files are not distributed with
 this repository and must be obtained through Academia Sinica. See the Data

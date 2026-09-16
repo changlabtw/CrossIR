@@ -1,16 +1,13 @@
 """Reading DNA methylation arrays into a probe-by-sample matrix.
 
-Reimplements `4_MET.ipynb` cells [1] and the assembly half of cell [3].
+Two steps. The first unpacks one text file per participant from the vendor
+archive and keeps the probes that pass the detection filter; the second joins
+those per-participant tables into a single matrix of beta values.
 
-The pipeline has two steps. The first unpacks one text file per participant from
-the vendor archive and keeps the probes that pass the detection filter; the
-second joins those per-sample tables into a single matrix of beta values.
-
-Only the second step can be run from this repository. The archive the first step
-reads lived on an external volume that is no longer available, so the per-sample
-tables are the earliest reachable input. Taiwan Biobank methylation is
-restricted-access data and is not distributed here in any case; see the Data
-Availability Statement in ``README.md``.
+Only the second step can be run from this repository. Taiwan Biobank methylation
+is restricted-access data and is not distributed here, so the per-participant
+tables are where this pipeline begins; see the Data Availability Statement in
+``README.md``.
 """
 
 import logging
@@ -75,13 +72,11 @@ def extract_samples(zip_path, met_ids: list[str], out_dir) -> None:
     writes one parquet per participant.
 
     Warning:
-        **This function cannot be run from this repository.** The archive it
-        reads lived on an external volume that is no longer available, so stage
-        08 starts from the per-sample tables it once produced. The function is
-        kept because it is part of the published method and a reader needs to see
-        what was done. The legacy version of this code also carried a bug that
-        would have raised ``TypeError`` -- ``is_in`` subscripted rather than
-        called (``docs/audit.md`` F8) -- which is corrected here.
+        **This function cannot be run from this repository.** The vendor archive
+        it reads is restricted-access Taiwan Biobank data and is not distributed
+        here, so the pipeline starts from the per-participant tables instead. The
+        function documents the extraction step for researchers who have their own
+        approved access.
 
     Args:
         zip_path: Vendor archive of per-sample ``*_nor.txt`` files.
@@ -138,13 +133,11 @@ def assemble_beta_matrix(sample_dir: Path | None = None, probes: pl.DataFrame | 
     Note:
         Assembled in two passes over the per-sample files -- the first
         intersecting the probe sets, the second filling a preallocated array.
-        The legacy version concatenated all samples side by side and then dropped
-        incomplete rows, which needs the full eligible matrix in memory at once;
-        on this data that is 8 GB against 16 GB of RAM. The two-pass route
-        produces the same matrix in 3 GB. It also aligns the probe column
-        explicitly: the legacy code paired an unsorted probe column with
-        per-sample frames it had sorted, which was only correct because the
-        manifest happens to be sorted already.
+        Concatenating all samples side by side and then dropping incomplete rows
+        would need the full eligible matrix in memory at once, which on this data
+        is 8 GB; the two-pass route produces the same matrix in 3 GB. Probes are
+        aligned by identifier rather than by position, so the result does not
+        depend on the manifest's row order.
 
     Args:
         sample_dir: Directory of per-sample parquet files. Defaults to

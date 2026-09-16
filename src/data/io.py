@@ -1,10 +1,9 @@
 """Path resolution and transformations shared by all three cohort readers.
 
 The three cohorts (NHANES, KNHANES, Taiwan Biobank) arrive in different file
-formats with different variable names, but they converge on one schema. The
-steps that are literally identical across the legacy
-``scripts/data_processor.py`` classes live here; anything cohort-specific stays
-in the cohort module.
+formats with different variable names, but they converge on one schema. The steps
+that are identical across all three live here; anything cohort-specific stays in
+the cohort module.
 """
 
 from pathlib import Path
@@ -15,8 +14,8 @@ import yaml
 HOMAIR_CUTOFF = 2.5
 """Threshold on HOMA-IR above which a participant is labelled insulin resistant.
 
-Kept at the thesis value. A sensitivity analysis over alternative cut-offs is
-recorded as a deferred decision in ``docs/migration-plan.md`` (X3).
+2.5 is the threshold most widely used for non-diabetic adults. Results at other
+cut-offs are not reported here.
 """
 
 _PATHS_CACHE: dict | None = None
@@ -139,9 +138,9 @@ def processed_path(name: str) -> Path:
 
 
 def output_path(name: str) -> Path:
-    """Build a path inside ``data/output`` and create the directory.
+    """Build a path inside the output directory, creating it if needed.
 
-    ``data/output`` holds the committed figures and result tables.
+    It holds the figures and result tables this pipeline produces.
 
     Args:
         name: File name, e.g. ``"stats.xlsx"``.

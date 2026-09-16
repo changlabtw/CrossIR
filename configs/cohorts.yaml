@@ -1,21 +1,17 @@
 # Raw input files per cohort.
 #
-# KNHANES file order is load-bearing and deliberately NOT alphabetical.
-# The legacy pipeline concatenated the yearly files in `os.listdir()` order,
-# sorting rows only *within* each file. The row order of the resulting table
-# therefore decides which participants land in the training and the test split
-# (`train_test_split(..., random_state=30)` shuffles positionally), so the
-# published metrics are only reachable with this exact sequence:
-#     hn20 (2020), hn21 (2021), hn19 (2019)
-# Confirmed against the legacy `data/processed/KNHANES_data.parquet`, whose three
-# blocks begin with A801169401 (hn20), A901215301 (hn21) and A751215301 (hn19).
-# See docs/audit.md F22.
+# The KNHANES file order is load-bearing and deliberately not alphabetical. The
+# yearly files are concatenated in the order listed here and rows are sorted only
+# *within* each file, so this sequence fixes the row order of the combined table
+# — which in turn fixes which participants land in the training and the test
+# split, because the split shuffles positionally. Changing the order changes the
+# split, and therefore every metric downstream.
 knhanes_files:
   - hn20_all.sas7bdat
   - hn21_all.sas7bdat
   - hn19_all.sas7bdat
 
 # NHANES survey cycles, by start year. Order is irrelevant here: the NHANES
-# reader sorts globally on Release_No before writing, so the output is
-# order-independent (verified: the legacy output is fully sorted and unique).
+# reader sorts globally on Release_No before writing, so its output is
+# order-independent.
 nhanes_years: [1999, 2001, 2003, 2005, 2007, 2009, 2011]

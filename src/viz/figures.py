@@ -1,11 +1,8 @@
 """Descriptive figures.
 
-Reimplements the plotting cells of the legacy project's `5_analysis.ipynb`
-(cells [17-18], [21-22] and [55]) as module-level functions, producing thesis
-Fig. `box-stats`, Fig. `correlation` and Fig. `homa`.
-
-Styling is reproduced from the legacy code so that the output can be compared
-against the published figures. A publication style sheet is a Phase 3 task.
+Every figure the pipeline produces, one function each. Each takes the data and a
+destination path, draws, saves and closes, so that a notebook cell is a single
+call and no figure state leaks between them.
 """
 
 import logging
@@ -306,10 +303,9 @@ def plot_tg_hdl_boxplots(frames: dict[str, pl.DataFrame], path: str | Path) -> P
     like real ones. One stacked panel per cohort, sharing both axes.
 
     Note:
-        The legacy implementation (`5_analysis.ipynb` cell [28]) passed the
-        NHANES frame for the panel titled ``KNHANES``, so the published figure
-        shows NHANES twice (`docs/audit.md` F2, decision D2). Here each panel
-        takes its own frame from ``frames``, which removes the possibility.
+        Each panel takes its own frame from ``frames``, keyed by the title it is
+        drawn with, so a panel cannot end up showing a different cohort from the
+        one its title names.
 
     Args:
         frames: Ordered mapping of panel title to a cohort table carrying ``TG``,

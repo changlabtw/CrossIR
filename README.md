@@ -52,9 +52,9 @@ configs/      Tuned hyperparameters, cohort file inventory, probe annotation, pa
 data/
   raw/        Raw cohort files (not distributed — see Data availability)
   processed/  Intermediate tables (not distributed)
-  output/     Result tables and figures (committed)
+output/       Result tables and figures (committed)
 models/       Final CatBoost models and manifest.csv
-notebooks/    01–08, one per analysis stage
+notebooks/    01–08, one per step of the analysis
 src/
   data/       Cohort readers: nhanes.py, knhanes.py, twb.py, io.py
   features/   Interaction generation and feature selection
@@ -83,25 +83,26 @@ raw_data_root: /path/to/your/data/raw
 
 ## Reproducing the analysis
 
-Run the notebooks in order. Each one ends with a validation cell that re-checks its own results.
+Run the notebooks in order. Each reads from `data/processed/` and writes to `output/`, so a run
+leaves every table and figure in the repository regenerated.
 
 | # | Notebook | Produces |
 |---|---|---|
 | 01 | `01_data_preparation.ipynb` | Cleaned cohort tables, HOMA-IR label, 241 engineered features |
-| 02 | `02_descriptive_statistics.ipynb` | `stats.xlsx`, boxplots, correlation matrix, HOMA-IR distributions |
+| 02 | `02_descriptive_statistics.ipynb` | `stats.xlsx` and `stats_original.xlsx`, boxplots, correlation matrix, HOMA-IR distributions |
 | 03 | `03_homair_regression.ipynb` | Continuous HOMA-IR regression across six models |
 | 04 | `04_feature_ablation.ipynb` | 9 / 17 / 57 / 241 feature sets compared |
 | 05 | `05_cross_ethnic.ipynb` | Within-cohort hold-out and cross-cohort transfer |
-| 06 | `06_final_model_and_shap.ipynb` | Pooled model, SHAP, top-20 retrain, `models/` |
+| 06 | `06_final_model_and_shap.ipynb` | Pooled model, SHAP (default and colour-blind palettes), top-20 retrain, `models/` |
 | 07 | `07_twb_validation.ipynb` | Taiwan Biobank scoring, TG/HDL-C comparison, Q-Q plot |
 | 08 | `08_differential_methylation.ipynb` | Volcano plot, `met-point.xlsx`, `candidate.csv`, enrichment |
 
-Two ordering constraints: **02 must run before 07**, which appends a fourth sheet to the `stats.xlsx`
-that 02 creates; and **07 must run before 08**, which splits participants by the label 07 predicts.
-Stages 02–05 depend only on 01 and can otherwise run in any order.
+Two ordering constraints: **02 must run before 07**, which appends a fourth sheet to the workbooks 02
+creates; and **07 must run before 08**, which splits participants by the label 07 predicts.
+Notebooks 02–05 depend only on 01 and can otherwise run in any order.
 
-Stage 08 takes about twelve minutes, most of it 1.3 million statistical tests; everything else runs in
-seconds to a few minutes.
+Notebook 08 takes about twelve minutes, most of it 1.3 million statistical tests; everything else
+runs in seconds to a few minutes.
 
 ## Data availability
 
@@ -115,30 +116,11 @@ This study's use of Taiwan Biobank data was approved under **TWBR11308-07**, and
 under IRB approval **NCCU-REC-201904-I017**. No individual-level data from any cohort is distributed
 with this repository; `data/raw/` and `data/processed/` are excluded from version control.
 
-**The methylation stage cannot be re-run from its raw input.** Stage 08 begins from per-participant
-methylation tables rather than from the vendor array archive. That archive is restricted-access Taiwan
-Biobank data and is additionally no longer held on reachable media, so the extraction step in
-`src/methylation/extract.py` is documented and preserved but cannot be executed here. Researchers with
-their own approved Taiwan Biobank methylation access can use it as the specification of that step.
-
-## Differences from the published manuscript
-
-This repository regenerates every reported number, table and figure from raw data, and each notebook
-checks its output against the original analysis. Six results differ, each by a decision taken
-deliberately rather than by a reproduction failure:
-
-| Result | Difference | Reason |
-|---|---|---|
-| `boxplot_of_TG_HDL_C_by_IR_and_Datasets.png` | The panel labelled KNHANES now plots KNHANES | The original passed the NHANES frame to that panel, so the figure showed NHANES twice |
-| Contributing Feature Ratio, 57-feature set | 66.7% → **67.9%** | Constant columns are now excluded consistently. The published row excluded them in three of its four cells and not in the fourth |
-| `stats.xlsx`, `ks_p_value-` column | Recomputed | The original tested the IR− group against the IR+ group's mean and standard deviation. No published value changes: every p-value was already below the reporting threshold |
-| Boxplot cohort label | `KNHAHES` → `KNHANES` | Typo in the label literal |
-| SHAP summary plot | Scatter points arranged differently | `shap.summary_plot` shuffles overlapping points through the global random generator. The published figure was never reproducible pixel for pixel; the generator is now seeded, so it is. Feature order, axis ranges and every underlying value are unchanged |
-| Engineered feature count | 58 → **57** | The manuscript figure was a miscount; all computations already used 57 |
-
-The manuscript also reports a GSEA alongside the over-representation analysis. No GSEA was in fact
-performed: the ranking call was given gene symbols with no ranking statistic and returned an empty
-result. The figure here is named for what it shows, `ORA.png`.
+**The methylation analysis cannot be re-run from its raw input here.** Notebook 08 begins from
+per-participant methylation tables rather than from the vendor array archive, which is
+restricted-access Taiwan Biobank data and is not distributed with this repository. The extraction step
+is kept in `src/methylation/extract.py` as the specification of how those tables were produced, for
+researchers with their own approved Taiwan Biobank methylation access.
 
 ## Citation
 

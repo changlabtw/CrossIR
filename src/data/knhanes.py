@@ -1,7 +1,7 @@
 """KNHANES 2019-2021 cohort reader.
 
-Reimplements ``KNHANESDataProcessor`` from the legacy project's
-``scripts/data_processor.py`` as plain functions.
+Reads the yearly SAS export files, renames the variables onto the shared
+schema, and applies the cohort filters.
 """
 
 import logging
@@ -47,10 +47,9 @@ def read_year(path: Path) -> pl.DataFrame:
     Note:
         ``LDL_C`` is *recomputed* with the Friedewald equation
         ``T_CHO - HDL_C - TG / 5`` and overwrites the directly measured
-        ``HE_LDL_drct`` value. Rows with a non-positive result are dropped. This
-        is reproduced from the legacy code unchanged; NHANES and Taiwan Biobank
-        keep their own LDL values, so the three cohorts do not share one LDL
-        definition (``docs/migration-plan.md``, X2).
+        ``HE_LDL_drct`` value. Rows with a non-positive result are dropped.
+        NHANES and Taiwan Biobank keep their own LDL values, so the three cohorts
+        do not share a single LDL definition.
 
     Args:
         path: Path to one ``.sas7bdat`` file.
@@ -86,8 +85,8 @@ def process_knhanes(root: Path | None = None, files: list[str] | None = None) ->
         the row order of the result, which in turn determines the training and
         test membership produced downstream by
         ``train_test_split(..., random_state=30)``. The default order comes from
-        ``configs/cohorts.yaml`` and is the one that produced the published
-        results; it is not alphabetical. See ``docs/audit.md`` F22.
+        ``configs/cohorts.yaml``. It is deliberately not alphabetical, and
+        changing it changes which participants land in which split.
 
     Args:
         root: Raw data root. Defaults to the configured ``raw_data_root``.

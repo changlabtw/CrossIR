@@ -1,8 +1,5 @@
 """Per-probe differential methylation testing.
 
-Reimplements the statistical half of `4_MET.ipynb` cell [3] and the thresholding
-of `5_analysis.ipynb` cell [33].
-
 Every probe is tested independently for a difference in beta value between the
 two insulin-resistance groups, and the resulting p-values are corrected for
 multiple testing across all probes with the Benjamini-Hochberg procedure. Both
@@ -48,15 +45,13 @@ def probe_statistics(
     Four tests are run per probe: a Kolmogorov-Smirnov test of each group against
     a normal distribution fitted to that group, the Mann-Whitney U test, and
     Welch's t-test. The KS tests estimate the normal's parameters from the sample
-    being tested, which makes them anti-conservative; this is reproduced from the
-    legacy code, and in practice they only inform the reader, since the
-    thresholding uses the rank-based test either way.
+    being tested, which makes them anti-conservative. They are reported for
+    information only: the significance thresholding uses the rank-based test.
 
     Note:
         The standard deviation reported per group uses the sample estimator
-        (``ddof=1``), while the KS tests are given the population estimator
-        (``ddof=0``), matching the legacy code, which took the first from polars
-        and the second from numpy.
+        (``ddof=1``); the KS tests are given the population estimator
+        (``ddof=0``), which is what fitting a normal to the sample calls for.
 
     Args:
         matrix: ``TargetID`` plus one column of beta values per participant, as
@@ -150,13 +145,6 @@ def volcano_frame(
     Mann-Whitney p-value -- a q-value, not a p-value. The x coordinate is the
     log2 ratio of the two group *medians*, which is robust to the long tail of
     beta values a few participants can carry.
-
-    Note:
-        The legacy cell wrapped both coordinates in
-        ``pl.when(normality holds).then(X).otherwise(X)`` with identical
-        branches, so the normality tests never selected anything
-        (``docs/audit.md`` F37). The dead conditional is dropped; the values are
-        unchanged.
 
     Args:
         stats: Output of :func:`adjust_pvalues`.

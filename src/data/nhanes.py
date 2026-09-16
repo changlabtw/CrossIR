@@ -1,9 +1,7 @@
 """NHANES 1999-2012 cohort reader.
 
-Reimplements ``NHANESDataProcessor`` from the legacy project's
-``scripts/data_processor.py`` as plain functions. The filter set and the derived
-columns are reproduced exactly; see ``docs/migration-plan.md`` for the
-discrepancies (X1) that are deliberately carried over rather than corrected.
+Reads the survey, examination and laboratory files of each two-year cycle,
+renames the variables onto the shared schema, and applies the cohort filters.
 """
 
 import logging
@@ -44,7 +42,7 @@ COLUMN_MAPPING = {
 }
 """NHANES variable codes mapped to the shared schema."""
 
-LEGACY_RENAME = {
+CYCLE_CODE_ALIASES = {
     "LBXHDD": "LBDHDD",
     "LBDHDL": "LBDHDD",
     "LBDSCR": "LBXSCR",
@@ -82,7 +80,7 @@ def read_cycle(year: int, root: Path | None = None) -> pd.DataFrame:
         if Path(name).suffix == ".xpt"
     ]
     merged = reduce(lambda left, right: pd.merge(left, right, on="SEQN", how="outer"), frames)
-    return merged.rename(columns=LEGACY_RENAME).loc[:, list(COLUMN_MAPPING)]
+    return merged.rename(columns=CYCLE_CODE_ALIASES).loc[:, list(COLUMN_MAPPING)]
 
 
 def process_nhanes(root: Path | None = None, years: list[int] | None = None) -> pl.DataFrame:
@@ -95,11 +93,10 @@ def process_nhanes(root: Path | None = None, years: list[int] | None = None) -> 
     sort on the identifier.
 
     Note:
-        ``AGE > 18`` excludes participants aged exactly 18, whereas the thesis
-        Methods section describes the criterion as age 18 and over. No fasting
-        duration filter is applied; fasting glucose and insulin are measured only
-        in the morning fasting subsample. Both behaviours are reproduced as
-        written in the legacy code (``docs/migration-plan.md``, X1).
+        ``AGE > 18`` is strict, so participants aged exactly 18 are excluded.
+        No fasting-duration filter is applied: NHANES measures fasting glucose
+        and insulin only in the morning fasting subsample, so the requirement is
+        already implicit in having those values at all.
 
     Args:
         root: Raw data root. Defaults to the configured ``raw_data_root``.

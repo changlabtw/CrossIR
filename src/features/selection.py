@@ -1,9 +1,7 @@
 """Feature-set construction for the modelling stages.
 
-Reimplements the selection cells of the legacy project's `0_KNHANES.ipynb`
-(cell [3]) as functions. The four sets defined here are the ablation behind
-thesis Table `add features and interaction`, and the largest of them is the
-feature matrix every later modelling stage uses.
+The four nested feature sets defined here are what the ablation compares, and
+the largest of them is the feature matrix the pooled model is trained on.
 """
 
 import logging
@@ -39,14 +37,13 @@ BASELINE_SELECTION = [
     "TG",
     "T_CHO",
 ]
-"""The nine baseline variables plus the target, in the legacy selection order.
+"""The nine baseline variables plus the target, in selection order.
 
 Note:
-    ``IR`` sits in the middle rather than at the end, because the legacy notebook
-    listed the columns alphabetically and the target happens to fall there. The
-    order survives into the feature matrix once the target is split off, and
-    column order decides how tree ensembles break ties between equally good
-    splits, so it is reproduced exactly.
+    The list is alphabetical, which puts ``IR`` in the middle rather than at the
+    end. That order survives into the feature matrix once the target is split
+    off, and column order decides how tree ensembles break ties between equally
+    good splits, so it is fixed here rather than left to the caller.
 """
 
 INTERACTION_PATTERN = "^.*[mul|log|div|sqrt].*$"

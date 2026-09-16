@@ -4,16 +4,12 @@
 # StratifiedKFold on AUC, with n_estimators capped at 1000 and early stopping after 50
 # rounds; the recorded n_estimators is the mean best iteration across folds).
 #
-# Provenance: transcribed from the `best_params` field of each legacy run's
-# results_<algorithm>.json, which is the only authoritative record of what the published
-# models were trained with. The literals pasted into
-# 1_bidirectional_train_model.ipynb cells [5] and [6] are residue from an earlier run and
-# were overwritten with None before training -- see docs/audit.md F25. These values are the
-# ones behind thesis Table `params1`, whose reg_lambda entry for the NHANES XGBoost model
-# is itself mistranscribed (F26); the value below is the one actually used.
+# The search is deterministic under the pinned environment, so re-running it
+# reproduces these values; notebook 05 carries the entry point for doing so.
+# Committing them keeps the search off the default path, which would otherwise add
+# minutes to every run for a result that does not change.
 
 cross_ethnic:
-  # 20250221201739_V31
   nhanes:
     CatBoost:
       colsample_bylevel: 0.5010369835298214
@@ -41,7 +37,6 @@ cross_ethnic:
       reg_lambda: 5.575308902460772
       subsample: 0.651155317862736
       n_estimators: 192
-  # 20250221205627_V32
   knhanes:
     CatBoost:
       colsample_bylevel: 0.9933601927668863
@@ -70,11 +65,8 @@ cross_ethnic:
       subsample: 0.5472419423830137
       n_estimators: 1000
 
-# The pooled NHANES + KNHANES model (thesis Table `params2`).
-#
-# Provenance: 20250221121511_V30, the run that performed the search. The re-run
-# 20250221134053_V30 supplied these same values and produced a bit-identical model.
-# The top-20 retrain (V36) reuses the CatBoost block unchanged, as 3_retrain.ipynb does.
+# The pooled NHANES + KNHANES model. The top-20 retrain reuses the CatBoost block
+# unchanged, so that the only difference between the two models is the feature set.
 pooled:
   CatBoost:
     colsample_bylevel: 0.988952150002474

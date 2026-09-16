@@ -1,9 +1,7 @@
 """Continuous HOMA-IR regression.
 
-Reimplements the legacy project's `6_regression.ipynb` as functions. This is the
-preliminary analysis behind thesis Table `regression2`: before HOMA-IR is
-thresholded into a binary label, it asks how well the index itself can be
-predicted from routine clinical variables.
+Before HOMA-IR is thresholded into a binary label, this asks how well the index
+itself can be predicted from routine clinical variables.
 
 The target is the natural logarithm of HOMA-IR, so every metric reported here is
 on the log scale. Exponentiating an error gives a multiplicative factor on the
@@ -61,17 +59,17 @@ EXTENDED_FEATURES = CORE_FEATURES + ADDITIONAL_FEATURES + ["RACE"]
 """Seventeen variables.
 
 Note:
-    ``RACE`` is kept in last position in both sets, matching the legacy column
+    ``RACE`` is kept in last position in both sets, matching the column
     order. Column order is not cosmetic for tree ensembles -- it decides how ties
     between equally good splits are broken -- so it is preserved exactly.
 """
 
 FEATURE_SETS = {"KNHANES_9": BASELINE_FEATURES, "KNHANES_17": EXTENDED_FEATURES}
-"""The two feature sets compared in the thesis table, named by their size."""
+"""The two feature sets compared, named by their size."""
 
 
 def build_regressors(random_state: int = 30) -> dict:
-    """Create the six regressors compared in the thesis, with default hyperparameters.
+    """Create the six regressors compared, with default hyperparameters.
 
     No tuning is performed at this stage; the point of the comparison is the
     difference between model families and between feature sets, not the best
@@ -88,9 +86,6 @@ def build_regressors(random_state: int = 30) -> dict:
         "LinearRegression": LinearRegression(),
         "Polynomial_Regression": make_pipeline(PolynomialFeatures(2), LinearRegression()),
         "RandomForest": RandomForestRegressor(random_state=random_state),
-        # The legacy code also passed `verbose=False` here; XGBoost reports it as an
-        # unused parameter and ignores it, so it is dropped. Gate G3 confirms the
-        # metrics are unchanged.
         "XGBoost": XGBRegressor(random_state=random_state),
         "LightGBM": LGBMRegressor(verbose=-1, random_state=random_state),
         "CatBoost": CatBoostRegressor(verbose=0, random_state=random_state),

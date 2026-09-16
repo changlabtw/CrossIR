@@ -1,25 +1,14 @@
 """Over-representation analysis of the differentially methylated genes.
 
-Reimplements `5_analysis.ipynb` cell [45]. The genes carrying a significant probe
-are tested against curated pathway and ontology libraries through Enrichr, to ask
+The genes carrying a significant probe are tested against curated pathway and ontology libraries through Enrichr, to ask
 whether they cluster in any biological process more than chance would predict.
-
-Note:
-    The legacy notebook also called ``gseapy.prerank`` (cell [48]) and named its
-    figure ``ORA_GSEA.png``. That call was handed a single column of gene symbols
-    with no ranking statistic, which is not a valid ranked list, and it returned
-    an empty result -- **no GSEA was performed and none is reported in the
-    thesis** (``docs/audit.md`` F38). It is not migrated, and the figure is named
-    for what it actually shows.
 
 Warning:
     Enrichr is a live web service whose libraries are versioned by year and
     updated over time, so this is the one step of the pipeline that can change
-    without any code changing. Re-running it on 2026-09-14 reproduced the
-    published result exactly -- the same nineteen terms in the same order, with
-    identical p-values -- but a future re-run carries no such guarantee. The
-    result table is written to ``data/output/ORA_result.xlsx`` so the figure can
-    be rebuilt without querying again.
+    without any code changing. The result table is written to
+    ``output/ORA_result.xlsx`` so the figure can be rebuilt without querying
+    again, and so that what the figure shows stays pinned to a specific query.
 """
 
 import logging
@@ -40,7 +29,7 @@ GENE_SET_LIBRARIES = [
     "PPI_Hub_Proteins",
     "HumanCyc_2016",
 ]
-"""Enrichr libraries queried, in the order the legacy notebook listed them."""
+"""Enrichr libraries queried."""
 
 ALPHA = 0.05
 """Adjusted p-value below which a pathway is reported as enriched."""

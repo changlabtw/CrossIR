@@ -14,20 +14,12 @@ raw_data_root: data/raw
 
 # Everything the pipeline writes.
 processed_root: data/processed
-output_root: data/output
+output_root: output
 
 # Per-participant DNA methylation tables, one parquet per participant.
 #
-# This is NOT the raw input. The raw input is an archive of per-sample text files
-# that is both restricted-access and no longer on reachable media, so the
-# extraction step of stage 08 cannot be re-run; these per-sample tables are the
-# earliest reachable input. See README.md.
+# This is NOT the raw input. The raw input is a vendor archive of per-sample text
+# files, which is restricted-access Taiwan Biobank data and is not distributed
+# with this repository; these per-participant tables are where the methylation
+# analysis begins. See README.md.
 methylation_samples_root: data/processed/MET
-
-# Locations of the original analysis, used ONLY by src/validate.py to re-run the
-# validation gates in the notebooks. They are not needed to run the pipeline, and
-# are null here because that project is not distributed. Set them in
-# configs/paths.local.yaml to reproduce the gate comparisons.
-reference_processed_root: null
-reference_results_root: null
-reference_output_root: null

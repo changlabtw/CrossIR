@@ -1,14 +1,10 @@
 """SHAP-based model interpretation.
 
-Reimplements `InsulinResistancePredictor.feature_importance` and
-`plot_shap_graph` from the legacy project's `scripts/model_training.py`, together
-with the feature-name prettifier from `5_analysis.ipynb` cell [53].
-
 SHAP attributes each prediction to the features that produced it, so the ranking
 here is over *contributions to predictions*, not over the model's internal split
-statistics. The two disagree: the twenty features the final model was retrained
-on come from this ranking, not from ``feature_importances_``
-(``docs/audit.md`` F30).
+statistics. The two disagree from the third feature onwards, so which of them a
+shortlist came from is worth stating: the twenty features the final model is
+retrained on come from this ranking, not from ``feature_importances_``.
 """
 
 import logging
@@ -16,6 +12,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
 import shap
 
 from src.data.io import display_path
@@ -35,11 +32,13 @@ def shap_values(model, X) -> np.ndarray:
     Prefers `fasttreeshap`, which is substantially quicker on wide matrices, and
     falls back to `shap` when it cannot read the model. A model whose
     contributions do not sum exactly to its output is retried with the
-    additivity check disabled, as the legacy code does.
+    additivity check disabled.
 
     Args:
         model: Fitted tree-based classifier.
-        X: Feature matrix to explain. Pass the features only -- see F28.
+        X: Feature matrix to explain. Pass the features only: columns the model
+            never split on receive zero attribution, so extra columns are
+            harmless but meaningless.
 
     Returns:
         SHAP values with shape ``(n_samples, n_features)``.
@@ -100,6 +99,18 @@ def prettify_feature_names(names: list[str]) -> list[str]:
     return pretty
 
 
+COLOR_BLIND_CMAP = LinearSegmentedColormap.from_list(
+    "okabe_ito_blue_orange", ["#0072B2", "#E69F00"]
+)
+"""Colour-blind-friendly replacement for the default red-to-blue SHAP colour map.
+
+Built from two Okabe-Ito hues, blue for low feature values and orange for high.
+Red and blue are hard to separate under the common forms of colour vision
+deficiency; blue and orange stay distinguishable under all three, and the pair
+keeps the two-ended low-to-high reading the default map has.
+"""
+
+
 def plot_shap_summary(
     values: np.ndarray,
     X,
@@ -107,6 +118,7 @@ def plot_shap_summary(
     pretty: bool = True,
     max_display: int = 20,
     random_state: int | None = PLOT_RANDOM_STATE,
+    cmap=None,
 ) -> Path:
     """Draw the SHAP summary (beeswarm) plot.
 
@@ -117,7 +129,7 @@ def plot_shap_summary(
         therefore renders differently every time -- two renders of one array
         differ in roughly 2% of their pixels. Seeding here makes the figure
         reproducible; it does not affect any value, only which point is drawn on
-        top of which (``docs/audit.md`` F31).
+        top of which.
 
     Args:
         values: SHAP values, shape ``(n_samples, n_features)``.
@@ -127,6 +139,8 @@ def plot_shap_summary(
         max_display: How many features to show.
         random_state: Seed for the point shuffling. ``None`` leaves the global
             generator alone and the figure becomes irreproducible.
+        cmap: Colour map for the feature-value scale. ``None`` keeps the library
+            default; pass :data:`COLOR_BLIND_CMAP` for the accessible version.
 
     Returns:
         The path written to.
@@ -140,6 +154,7 @@ def plot_shap_summary(
         feature_names=prettify_feature_names(names) if pretty else names,
         max_display=max_display,
         show=False,
+        **({} if cmap is None else {"cmap": cmap}),
     )
     plt.tight_layout()
 

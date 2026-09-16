@@ -1,13 +1,11 @@
 """Locating differentially methylated probes within gene structures.
 
-Reimplements `5_analysis.ipynb` cells [35]-[39]. Each significant probe is looked
-up against the Ensembl gene track of the hg19 assembly to decide whether it falls
-inside a protein-coding sequence.
+Each significant probe is looked up against the Ensembl gene track of the hg19
+assembly to decide whether it falls inside a protein-coding sequence.
 
-The legacy notebook queried the UCSC Genome Browser REST API live, at the point
-of use. Here the query is a one-off whose result is committed as
-``configs/probe_annotation.csv`` (decision D10), so the notebook runs offline and
-the annotation cannot drift underneath a later re-run.
+The UCSC Genome Browser query is a one-off whose result is committed as
+``configs/probe_annotation.csv``, so the pipeline runs offline and the annotation
+cannot drift underneath a later re-run.
 """
 
 import logging
@@ -120,9 +118,8 @@ def classify_coding_region(annotation: pl.DataFrame) -> pl.DataFrame:
     Note:
         These three conditions are not exhaustive. A probe whose transcripts all
         have exactly one determined boundary matches none of them and is left
-        unlabelled -- three of the twenty-two significant probes in this study
-        (``docs/audit.md`` F39). Reproduced as published rather than widened,
-        since the labels feed a published table.
+        unlabelled -- three of the twenty-two significant probes here. Such a
+        probe is reported as unlabelled rather than forced into a category.
 
     Args:
         annotation: Output of :func:`query_ucsc_regions` or

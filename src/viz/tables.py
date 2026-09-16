@@ -1,8 +1,8 @@
 """Descriptive statistics tables.
 
-Reimplements the `stats_table` function of the legacy project's
-`5_analysis.ipynb` (cell [9]) as a module-level function. It produces one sheet
-of `stats.xlsx`, corresponding to thesis Tables `stats1`, `stats2` and `stats3`.
+One function per table. :func:`descriptive_statistics` produces one sheet of
+``stats.xlsx``: per-variable means and standard deviations split by
+insulin-resistance status, with the tests behind the comparison.
 """
 
 import logging
@@ -64,7 +64,7 @@ def _sex_counts(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def _group_p_values(df: pl.DataFrame) -> pl.DataFrame:
+def _group_p_values(df: pl.DataFrame, alpha: float | None = ALPHA) -> pl.DataFrame:
     """Test every variable for normality and for a difference between IR groups.
 
     Three tests are run per variable: a Kolmogorov-Smirnov test of each IR group
@@ -75,17 +75,29 @@ def _group_p_values(df: pl.DataFrame) -> pl.DataFrame:
     Note:
         Each KS test compares a sample against a normal whose mean and standard
         deviation are estimated from that same sample, which makes the test
-        anti-conservative (the Lilliefors situation). This is reproduced from the
-        legacy code; replacing the test is out of scope for a reproduction phase.
+        anti-conservative (the Lilliefors situation). Read it as a rough
+        indication of non-normality, not as a calibrated test.
 
     Args:
         df: Cohort table with an ``IR`` column and numeric feature columns.
+        alpha: Significance level below which a p-value is reported as
+            ``"< alpha"`` rather than as a number. Pass ``None`` to report every
+            p-value as its own value, which is what the reader needs to judge how
+            far below the threshold a result actually falls.
 
     Returns:
         One row per column of ``df`` with the four p-value columns.
     """
+    def report(value: float):
+        """Render one p-value, thresholded or not."""
+        return f"< {alpha}" if alpha is not None and value < alpha else value
+
     rows = []
     for column in df.columns:
+        if column == "IR":
+            # The grouping column itself is constant within each group, so every
+            # test on it is degenerate. Its row is dropped downstream anyway.
+            continue
         positive = df.filter(pl.col("IR") == True)[column].to_numpy()  # noqa: E712
         negative = df.filter(pl.col("IR") == False)[column].to_numpy()  # noqa: E712
 
@@ -97,10 +109,10 @@ def _group_p_values(df: pl.DataFrame) -> pl.DataFrame:
         rows.append(
             [
                 column,
-                f"< {ALPHA}" if ks_negative < ALPHA else ks_negative,
-                f"< {ALPHA}" if ks_positive < ALPHA else ks_positive,
-                f"< {ALPHA}" if welch < ALPHA else welch,
-                f"< {ALPHA}" if mann_whitney < ALPHA else mann_whitney,
+                report(ks_negative),
+                report(ks_positive),
+                report(welch),
+                report(mann_whitney),
             ]
         )
 
@@ -108,10 +120,11 @@ def _group_p_values(df: pl.DataFrame) -> pl.DataFrame:
         rows,
         schema=["column", "ks_p_value-", "ks_p_value+", "t_test_p_value", "u_test_p_value"],
         orient="row",
+        strict=False,
     )
 
 
-def descriptive_statistics(df: pl.DataFrame) -> pd.DataFrame:
+def descriptive_statistics(df: pl.DataFrame, alpha: float | None = ALPHA) -> pd.DataFrame:
     """Summarise one cohort as a publication table.
 
     Each variable is reported as ``mean±SD`` overall and within each insulin
@@ -120,7 +133,9 @@ def descriptive_statistics(df: pl.DataFrame) -> pd.DataFrame:
     label.
 
     Args:
-        df: Cleaned cohort table, as written by stage 01.
+        df: Cleaned cohort table.
+        alpha: Significance level for the p-value columns. ``None`` reports every
+            p-value as its own value instead of ``"< alpha"``.
 
     Returns:
         The finished sheet, ready for :meth:`pandas.DataFrame.to_excel`.
@@ -147,7 +162,7 @@ def descriptive_statistics(df: pl.DataFrame) -> pd.DataFrame:
             .agg(pl.all().std())
             .transpose(include_header=True, column_names=["std_IR-", "std_IR+"])
         )
-        parts.append(_group_p_values(df))
+        parts.append(_group_p_values(df, alpha))
 
     table = reduce(lambda left, right: left.join(right, on="column"), parts)
     table = table.filter(pl.col("column") != "IR")
@@ -203,11 +218,10 @@ def _metric_cell(row: dict, bold: bool) -> str:
 
 
 def regression_latex_table(results: pl.DataFrame, highlight: str = "CatBoost") -> str:
-    """Render the regression results as the body of the thesis table.
+    """Render the regression results as LaTeX table rows.
 
-    In the legacy project this markup was applied by hand to the exported
-    spreadsheet, which meant the published table could not be regenerated from
-    the code (``docs/audit.md`` F24). Generating it here closes that gap.
+    Generating the markup rather than typing it keeps the typeset table and the
+    spreadsheet from drifting apart.
 
     Args:
         results: Tidy results from

@@ -1,8 +1,6 @@
 """Classifier construction and training.
 
-Reimplements the training half of the legacy project's
-`scripts/model_training.py` (`InsulinResistancePredictor`) as functions. The
-evaluation half lives in :mod:`src.models.evaluate`.
+Evaluation lives in :mod:`src.models.evaluate`.
 
 Class imbalance is handled by weighting rather than resampling: each library is
 given its own form of the same positive-to-negative ratio, computed on the
@@ -34,10 +32,8 @@ RANDOM_STATE = 30
 """Seed for the train/test split and the cross-validation folds.
 
 Note:
-    This seeds the *splitting*, not the estimators. The boosters are constructed
-    without an explicit seed, exactly as the legacy code constructs them, because
-    their library defaults are deterministic and the published metrics are only
-    reachable that way. See ``docs/validation-log.md``.
+    This seeds the *splitting*, not the estimators. See :func:`build_classifier`
+    for why the boosters are left on their library default seeds.
 """
 
 DECISION_THRESHOLD = 0.5
@@ -109,11 +105,11 @@ def build_classifier(algorithm: str, y_train: pd.Series, params: dict | None = N
     """Create an unfitted classifier with class weighting applied.
 
     Note:
-        No ``random_state`` is passed. The boosting libraries have deterministic
-        default seeds, and supplying one explicitly is not necessarily a no-op --
-        LightGBM derives ``feature_fraction_seed``, ``bagging_seed`` and
-        ``data_random_seed`` from ``seed`` -- so the estimators are constructed
-        exactly as the legacy code constructs them.
+        No ``random_state`` is passed. All three libraries have deterministic
+        default seeds, so the estimators are reproducible as constructed, and
+        supplying a seed explicitly is not necessarily a no-op: LightGBM derives
+        ``feature_fraction_seed``, ``bagging_seed`` and ``data_random_seed`` from
+        ``seed``, so passing even the documented default can change results.
 
     Args:
         algorithm: ``"XGBoost"``, ``"lightGBM"`` or ``"CatBoost"``.
@@ -130,8 +126,6 @@ def build_classifier(algorithm: str, y_train: pd.Series, params: dict | None = N
     weights = class_weights(y_train, algorithm)
 
     if algorithm == "XGBoost":
-        # The legacy code also passed `use_label_encoder=False` and
-        # `verbose=False`; xgboost reports both as unused and ignores them.
         return xgb.XGBClassifier(
             **params,
             objective="binary:logistic",
@@ -205,16 +199,15 @@ def train_classifier(
 
 
 def split_frames(run: dict, target: str = TARGET) -> tuple[pl.DataFrame, pl.DataFrame]:
-    """Rebuild the training and test matrices the legacy runs exported.
+    """Reassemble a run's splits as two tidy frames.
 
     Args:
         run: Result of :func:`train_classifier`.
         target: Name of the target column.
 
     Returns:
-        The training matrix, and the test matrix with a ``preds`` column
-        appended -- the same layout as the legacy ``training_data.csv`` and
-        ``testing_data.csv``.
+        The training matrix, and the test matrix with the model's predicted
+        probabilities appended as a ``preds`` column.
     """
     training = pl.from_pandas(pd.concat([run["X_train"], run["y_train"]], axis=1))
     testing = pl.from_pandas(pd.concat([run["X_test"], run["y_test"]], axis=1))
@@ -226,12 +219,9 @@ def build_voting_classifier(estimators: list[tuple[str, object]]) -> VotingClass
     """Combine fitted or unfitted estimators into a soft-voting ensemble.
 
     Note:
-        ``VotingClassifier.fit`` clones every estimator and refits it, so the
-        result depends only on the estimators' hyperparameters and the training
-        data. The legacy ``EnsembleModel`` loaded already-fitted pickles from the
-        run folder and passed them here, which had the same effect; building the
-        estimators directly from configuration is equivalent and avoids the
-        pickle round-trip.
+        ``VotingClassifier.fit`` clones every estimator and refits it, so
+        whether the estimators passed in are already fitted makes no difference:
+        the result depends only on their hyperparameters and the training data.
 
     Args:
         estimators: ``(name, estimator)`` pairs.
@@ -245,8 +235,7 @@ def build_voting_classifier(estimators: list[tuple[str, object]]) -> VotingClass
 def _parameter_bounds(algorithm: str) -> dict[str, tuple[float, float]]:
     """Search space for the Bayesian optimisation, per algorithm.
 
-    Reproduced from `scripts/model_training.py` ``run()``. Only the parameters a
-    given library supports are included.
+    Only the parameters a given library supports are included.
 
     Args:
         algorithm: ``"XGBoost"``, ``"lightGBM"`` or ``"CatBoost"``.

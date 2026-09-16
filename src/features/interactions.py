@@ -1,8 +1,5 @@
 """Interaction feature generation.
 
-Reimplements ``FeatureGenerator`` from the legacy project's
-``scripts/feature_engineering.py`` as a single function.
-
 For every eligible clinical variable the generator adds three unary transforms
 (square, square root, base-10 logarithm) and, for every unordered pair, a product
 and a ratio. Rows where any generated value is not finite are dropped.
@@ -32,9 +29,8 @@ interpretable meaning.
 Note:
     ``HOMA-IR`` and ``FASTING_INSULIN`` are *not* excluded here, so the generated
     table does contain interactions derived from the quantities the target is
-    computed from. Every modelling stage drops those columns by pattern before
-    training, which is what keeps the target out of the feature matrix. The
-    exclusion list is reproduced from the legacy code unchanged.
+    computed from. Every modelling notebook drops those columns by pattern
+    before training, which is what keeps the target out of the feature matrix.
 """
 
 
@@ -54,9 +50,7 @@ def generate_interactions(
         df: Cleaned cohort table.
         race: Value written to the ``RACE`` column, a coarse ancestry grouping
             of the cohort: ``1`` for the US cohort (NHANES) and ``2`` for the
-            East Asian cohorts (KNHANES and Taiwan Biobank). Defaults to ``1``
-            in the legacy code, which is why the feature-ablation runs carry
-            ``RACE = 1`` on Korean data (``docs/audit.md`` F23).
+            East Asian cohorts (KNHANES and Taiwan Biobank).
         exclude: Columns not to build interactions from. Defaults to
             :data:`EXCLUDED_FROM_INTERACTIONS`.
 

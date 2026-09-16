@@ -1,8 +1,7 @@
 """Logging configuration shared by the notebooks and the pipeline modules.
 
-Replaces the ``utils/logger.py`` class in the legacy project with the standard
-library equivalent: modules create their own ``logging.getLogger(__name__)`` and
-the entry point (a notebook, usually) calls :func:`configure_logging` once.
+Modules create their own ``logging.getLogger(__name__)``; the entry point
+(a notebook, usually) calls :func:`configure_logging` once.
 """
 
 import logging
