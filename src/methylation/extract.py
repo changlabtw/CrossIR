@@ -8,6 +8,33 @@ Only the second step can be run from this repository. Taiwan Biobank methylation
 is restricted-access data and is not distributed here, so the per-participant
 tables are where this pipeline begins; see the Data Availability Statement in
 ``README.md``.
+
+Platform:
+    Illumina Infinium MethylationEPIC, not the earlier 450K array. The manifest
+    at :data:`ANNOTATION_SUBPATH` carries 866,895 probes -- 863,904 ``cg`` sites
+    annotated on GRCh37/hg19, 2,932 ``ch`` non-CpG sites and 59 ``rs`` genotyping
+    controls -- against roughly 485,000 for 450K.
+
+Normalisation:
+    None is performed here. The archive supplies one ``*_nor.txt`` export per
+    participant, holding beta values the data provider has already normalised,
+    and nothing in this module re-normalises, background-corrects or
+    batch-adjusts them. Which method the provider used is not recoverable from
+    the exports and must come from the documentation accompanying the data
+    release.
+
+Probe filtering:
+    Four filters, applied across the two steps: ``cg`` probes only, autosomes
+    only (:data:`EXCLUDED_CHROMOSOMES`), a per-reading detection p-value below
+    :data:`DETECTION_P_VALUE`, and complete-case -- a probe is kept only when
+    every participant has a usable reading for it. On this cohort that is
+    866,895 -> 863,904 -> 844,316 -> 332,284 probes.
+
+    **No cross-reactive or SNP-overlap filter is applied.** Published
+    cross-reactive probe lists are not consulted, and the manifest's ``SNP_ID``,
+    ``SNP_DISTANCE`` and ``SNP_MINORALLELEFREQUENCY`` columns are carried through
+    but unused. Probes reported as differentially methylated are therefore
+    candidates for follow-up rather than a filtered final set.
 """
 
 import logging
