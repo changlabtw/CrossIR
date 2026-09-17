@@ -12,12 +12,15 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap
 import shap
 
 from src.data.io import display_path
+from src.viz.palettes import COLOR_BLIND_CMAP
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["COLOR_BLIND_CMAP", "shap_values", "rank_features",
+           "prettify_feature_names", "plot_shap_summary"]
 
 TRANSFORM_SUFFIXES = ["log", "sqrt", "square"]
 """Unary transforms whose suffix is rewritten as a function call for display."""
@@ -97,18 +100,6 @@ def prettify_feature_names(names: list[str]) -> list[str]:
             for name in pretty
         ]
     return pretty
-
-
-COLOR_BLIND_CMAP = LinearSegmentedColormap.from_list(
-    "okabe_ito_blue_orange", ["#0072B2", "#E69F00"]
-)
-"""Colour-blind-friendly replacement for the default red-to-blue SHAP colour map.
-
-Built from two Okabe-Ito hues, blue for low feature values and orange for high.
-Red and blue are hard to separate under the common forms of colour vision
-deficiency; blue and orange stay distinguishable under all three, and the pair
-keeps the two-ended low-to-high reading the default map has.
-"""
 
 
 def plot_shap_summary(

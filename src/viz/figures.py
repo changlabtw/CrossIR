@@ -99,13 +99,22 @@ def plot_feature_boxplots(df: pl.DataFrame, title: str, path: str | Path) -> Pat
     return _save(path)
 
 
-def plot_correlation_matrix(frames: dict[str, pl.DataFrame], path: str | Path) -> Path:
+def plot_correlation_matrix(
+    frames: dict[str, pl.DataFrame],
+    path: str | Path,
+    cmap: str = "coolwarm",
+) -> Path:
     """Draw a lower-triangular correlation heatmap for each cohort.
 
     Args:
         frames: Mapping of panel title to cohort table, laid out on a 2x2 grid
             in insertion order.
         path: Destination PNG path.
+        cmap: Diverging colour map for the correlation scale. The default
+            ``coolwarm`` runs red to blue, the hardest pair to separate under the
+            common forms of colour vision deficiency; pass
+            :data:`src.viz.palettes.COLOR_BLIND_DIVERGING` for the accessible
+            variant.
 
     Returns:
         The path written to.
@@ -126,7 +135,7 @@ def plot_correlation_matrix(frames: dict[str, pl.DataFrame], path: str | Path) -
             annot=True,
             fmt=".2f",
             annot_kws={"size": 6},
-            cmap="coolwarm",
+            cmap=cmap,
             vmax=1,
             vmin=-1,
             cbar=False,
@@ -140,7 +149,11 @@ def plot_correlation_matrix(frames: dict[str, pl.DataFrame], path: str | Path) -
     return _save(path)
 
 
-def plot_homair_distributions(frames: dict[str, pl.DataFrame], path: str | Path) -> Path:
+def plot_homair_distributions(
+    frames: dict[str, pl.DataFrame],
+    path: str | Path,
+    cutoff_color: str = "red",
+) -> Path:
     """Draw the log HOMA-IR distribution of each cohort with the cut-off marked.
 
     Args:
@@ -148,6 +161,10 @@ def plot_homair_distributions(frames: dict[str, pl.DataFrame], path: str | Path)
             ``HOMA-IR`` column. Laid out on a 2x2 grid with the unused panel
             removed.
         path: Destination PNG path.
+        cutoff_color: Colour of the dashed HOMA-IR cut-off line. Line style
+            already distinguishes it from the histogram, so this only affects
+            how easily it is picked out; ``"#D55E00"`` is the accessible
+            choice.
 
     Returns:
         The path written to.
@@ -172,7 +189,7 @@ def plot_homair_distributions(frames: dict[str, pl.DataFrame], path: str | Path)
             x=np.log(HOMAIR_CUTOFF),
             ymin=0,
             ymax=axes[row, column].get_ylim()[1],
-            color="red",
+            color=cutoff_color,
             linestyle="dashed",
         )
 
@@ -348,6 +365,8 @@ def plot_quantile_comparison(
     labels: tuple[str, str],
     title: str,
     path: str | Path,
+    point_color: str = "blue",
+    line_color: str = "red",
 ) -> Path:
     """Draw a two-sample Q-Q plot against the line of equality.
 
@@ -362,6 +381,10 @@ def plot_quantile_comparison(
             is appended to each.
         title: Figure title.
         path: Destination PNG path.
+        point_color: Colour of the quantile scatter.
+        line_color: Colour of the dashed ``y = x`` reference line. Red on blue
+            is the pair worth avoiding; ``"#D55E00"`` reads as distinct from the
+            points under every form of colour vision deficiency.
 
     Returns:
         The path written to.
@@ -374,14 +397,14 @@ def plot_quantile_comparison(
     plt.scatter(
         reference_quantiles,
         comparison_quantiles,
-        color="blue",
+        color=point_color,
         s=10,
         label="Quantile points",
     )
 
     low = min(reference_quantiles.min(), comparison_quantiles.min())
     high = max(reference_quantiles.max(), comparison_quantiles.max())
-    plt.plot([low, high], [low, high], color="red", linestyle="--", label="y = x")
+    plt.plot([low, high], [low, high], color=line_color, linestyle="--", label="y = x")
 
     plt.xlabel(f"{labels[0]} Quantiles")
     plt.ylabel(f"{labels[1]} Quantiles")
@@ -395,6 +418,10 @@ def plot_volcano(
     path: str | Path,
     p_threshold: float = 0.05,
     log2fc_threshold: float = 0.2,
+    significant_color: str = "red",
+    background_color: str = "gray",
+    fold_change_color: str = "blue",
+    p_value_color: str = "green",
 ) -> Path:
     """Draw a volcano plot of the per-probe differential methylation results.
 
@@ -409,6 +436,14 @@ def plot_volcano(
         path: Destination PNG path.
         p_threshold: Adjusted p-value threshold, drawn as a horizontal line.
         log2fc_threshold: Fold-change threshold, drawn as two vertical lines.
+        significant_color: Colour of the probes clearing both thresholds.
+        background_color: Colour of every other probe.
+        fold_change_color: Colour of the two vertical threshold lines.
+        p_value_color: Colour of the horizontal threshold line. The defaults put
+            red points against a green line, which is the classic pair to avoid;
+            the accessible variant uses vermillion points and draws both sets of
+            threshold lines in blue, since their orientation already tells them
+            apart.
 
     Returns:
         The path written to.
@@ -419,14 +454,14 @@ def plot_volcano(
     plt.scatter(
         data["log2_fc"],
         data["neg_log10_p"],
-        c=data["significant"].map({True: "red", False: "gray"}),
+        c=data["significant"].map({True: significant_color, False: background_color}),
         alpha=0.5,
         s=40,
         edgecolor=None,
     )
-    plt.axvline(x=-log2fc_threshold, color="blue", linestyle="--", linewidth=1)
-    plt.axvline(x=log2fc_threshold, color="blue", linestyle="--", linewidth=1)
-    plt.axhline(y=-np.log10(p_threshold), color="green", linestyle="--", linewidth=1)
+    plt.axvline(x=-log2fc_threshold, color=fold_change_color, linestyle="--", linewidth=1)
+    plt.axvline(x=log2fc_threshold, color=fold_change_color, linestyle="--", linewidth=1)
+    plt.axhline(y=-np.log10(p_threshold), color=p_value_color, linestyle="--", linewidth=1)
 
     plt.title("Volcano plot of DNA methylation analysis", fontsize=16)
     plt.xlabel("Log2 Fold Change", fontsize=14)
@@ -456,7 +491,12 @@ def _wrap_term(term: str) -> str:
     return term
 
 
-def plot_enrichment_bars(results, path: str | Path, top_n: int = 3) -> Path:
+def plot_enrichment_bars(
+    results,
+    path: str | Path,
+    top_n: int = 3,
+    colors: list[str] | None = None,
+) -> Path:
     """Draw the top enriched pathways of each gene-set library.
 
     Args:
@@ -465,6 +505,10 @@ def plot_enrichment_bars(results, path: str | Path, top_n: int = 3) -> Path:
             and sorted by combined score.
         path: Destination PNG path.
         top_n: Pathways shown per library.
+        colors: One colour per gene-set library, assigned in the order the
+            libraries first appear. ``None`` uses ``tab10``, which pairs red
+            with green within its first four entries; pass
+            :data:`src.viz.palettes.COLOR_BLIND_CATEGORICAL` instead.
 
     Returns:
         The path written to.
@@ -480,9 +524,9 @@ def plot_enrichment_bars(results, path: str | Path, top_n: int = 3) -> Path:
     top = top.assign(Term=top["Term"].map(_wrap_term))
 
     plt.figure(figsize=(18, 12))
-    palette = dict(
-        zip(top["Gene_set"].unique(), sns.color_palette("tab10", top["Gene_set"].nunique()))
-    )
+    libraries = top["Gene_set"].unique()
+    hues = colors[: len(libraries)] if colors else sns.color_palette("tab10", len(libraries))
+    palette = dict(zip(libraries, hues))
     axis = sns.barplot(x="Combined Score", y="Term", hue="Gene_set", data=top, palette=palette)
 
     plt.title(

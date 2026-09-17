@@ -13,6 +13,42 @@ Insulin resistance is defined by **HOMA-IR > 2.5**, where
 `HOMA-IR = fasting insulin (µU/mL) × fasting glucose (mg/dL) / 405`. Participants with diabetes are
 excluded, so the task is detecting the pre-diabetic state in people not yet diagnosed.
 
+## Study design
+
+Non-diabetic adults from NHANES and KNHANES, both with measured HOMA-IR, train and test the
+classifiers. Transfer between the two cohorts is assessed in both directions before they are pooled.
+The model trained on the pooled set is then applied to a Taiwan Biobank cohort that has no
+fasting-insulin measurement and therefore no observed label, and the subset of those participants with
+methylation array data is compared by predicted IR status.
+
+```mermaid
+flowchart TB
+    NHANES["NHANES<br/>Non-diabetic adults<br/>n = 11,660"]
+    KNHANES["KNHANES<br/>Non-diabetic adults<br/>n = 15,138"]
+    POOLED["Pooled training set<br/>n = 26,798<br/>Gradient-boosting classifiers<br/>IR defined as HOMA-IR &gt; 2.5"]
+    TWB["Taiwan Biobank<br/>n = 92,734, no fasting-insulin measurement<br/>IR status predicted by the final model"]
+    MET["Methylation subset<br/>n = 1,199 with EPIC array data<br/>Compared by predicted IR status"]
+
+    NHANES -.-|bidirectional transfer| KNHANES
+    NHANES --> POOLED
+    KNHANES --> POOLED
+    POOLED --> TWB
+    TWB --> MET
+
+    classDef cohort fill:#DEEBF7,stroke:#0072B2,stroke-width:1.5px,color:#14213D
+    classDef pooled fill:#FDF1DC,stroke:#E69F00,stroke-width:1.5px,color:#14213D
+    classDef external fill:#DCF1EA,stroke:#009E73,stroke-width:1.5px,color:#14213D
+    classDef omics fill:#F7E6F0,stroke:#CC79A7,stroke-width:1.5px,color:#14213D
+
+    class NHANES,KNHANES cohort
+    class POOLED pooled
+    class TWB external
+    class MET omics
+```
+
+The same figure is available as TikZ in [`output/study_design.tex`](output/study_design.tex) for the
+manuscript.
+
 ## Results
 
 | Cohort | Raw records | Analysed | Insulin resistant |
@@ -115,6 +151,16 @@ Notebooks 02–05 depend only on 01 and can otherwise run in any order.
 
 Notebook 08 takes about twelve minutes, most of it 1.3 million statistical tests; everything else
 runs in seconds to a few minutes.
+
+**Figure colours.** Five figures use colour to carry meaning in a way that fails for the common forms
+of colour vision deficiency, and each has a `_color_blind.png` sibling drawn from the
+[Okabe–Ito palette](src/viz/palettes.py): `correlation_matrix` (a red-to-blue diverging scale),
+`volcano_plot_of_DNA_methylation_analysis` (red points against a green threshold line), `ORA` (a
+categorical palette pairing red with green), and `HOMA-IR` and `qqplot_NHANES+KNHANES_vs_TWB` (red
+reference lines). `SHAP_summary_plot_new` has one for the same reason. The remaining figures already
+encode safely and have no sibling: `ConfusionMatrix_CatBoost` is a single-hue sequential map,
+`ROC_PR_CatBoost` is orange on blue, and the three boxplots separate IR− from IR+ with blue and
+orange. In every pair the data, axes and ordering are identical — only the palette differs.
 
 ## Data availability
 

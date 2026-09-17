@@ -1,0 +1,69 @@
+% Study design figure.
+%
+% Standalone TikZ. Compile on its own with:
+%     pdflatex study_design.tex
+% To place it in a manuscript instead, \input{study_design} after deleting the
+% \documentclass ... \begin{document} preamble and the closing \end{document},
+% and make sure the parent document loads tikz with the arrows.meta,
+% positioning and calc libraries.
+%
+% Colours are Okabe-Ito, which stay distinguishable under the common forms of
+% colour vision deficiency. Every count matches the analysis outputs.
+
+\documentclass[border=8pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc}
+
+% Okabe-Ito
+\definecolor{oiBlue}{HTML}{0072B2}
+\definecolor{oiOrange}{HTML}{E69F00}
+\definecolor{oiGreen}{HTML}{009E73}
+\definecolor{oiPurple}{HTML}{CC79A7}
+\definecolor{oiGrey}{HTML}{6E6E6E}
+
+\begin{document}
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  box/.style={
+    draw, rounded corners=2pt, line width=0.9pt,
+    align=center, inner sep=6pt, minimum height=11mm, text width=52mm,
+  },
+  cohort/.style={box, draw=oiBlue, fill=oiBlue!8},
+  pooled/.style={box, draw=oiOrange, fill=oiOrange!10, text width=78mm},
+  external/.style={box, draw=oiGreen, fill=oiGreen!8, text width=78mm},
+  omics/.style={box, draw=oiPurple, fill=oiPurple!10, text width=78mm},
+  flow/.style={-{Stealth[length=2.6mm]}, line width=0.9pt, draw=oiGrey},
+  transfer/.style={{Stealth[length=2.4mm]}-{Stealth[length=2.4mm]},
+                   line width=0.9pt, draw=oiBlue, dashed},
+  note/.style={font=\sffamily\scriptsize\itshape, text=oiGrey},
+]
+
+\node[cohort] (nhanes) {\textbf{NHANES}\\Non-diabetic adults\\$n = 11{,}660$};
+\node[cohort, right=26mm of nhanes] (knhanes)
+  {\textbf{KNHANES}\\Non-diabetic adults\\$n = 15{,}138$};
+
+\draw[transfer] (nhanes) -- node[note, above, align=center]
+  {bidirectional\\transfer} (knhanes);
+
+\coordinate (mid) at ($(nhanes)!0.5!(knhanes)$);
+
+\node[pooled, below=16mm of mid] (pooled)
+  {\textbf{Pooled training set}\\$n = 26{,}798$\\[1pt]
+   Gradient-boosting classifiers\\
+   IR defined as HOMA-IR $> 2.5$};
+
+\draw[flow] (nhanes.south) -- ++(0,-6mm) -| (pooled.north);
+\draw[flow] (knhanes.south) -- ++(0,-6mm) -| (pooled.north);
+
+\node[external, below=10mm of pooled] (twb)
+  {\textbf{Taiwan Biobank}\\$n = 92{,}734$, no fasting-insulin measurement\\[1pt]
+   IR status predicted by the final model};
+\draw[flow] (pooled) -- (twb);
+
+\node[omics, below=10mm of twb] (met)
+  {\textbf{Methylation subset}\\$n = 1{,}199$ with EPIC array data\\[1pt]
+   Compared by predicted IR status};
+\draw[flow] (twb) -- (met);
+
+\end{tikzpicture}
+\end{document}
