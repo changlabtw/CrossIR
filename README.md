@@ -40,10 +40,22 @@ practical result: the deployable model needs twenty inputs.
 AUC 0.862, KNHANES → NHANES AUC 0.860. Performance survives the ethnic transfer with a modest
 penalty against the within-cohort ceiling of 0.868 and 0.878.
 
-**Differential methylation.** Of 332,284 autosomal CpG probes tested across the 1,199 Taiwan Biobank
-participants with array data, 22 differ between the predicted groups at q < 0.05 and |log2FC| > 0.2,
-spanning 13 named genes including COL25A1 (`cg22266749`), PSMA6 (`cg02987832`) and ERV3-1
-(`cg06513015`). The grouping variable here is a model prediction, so this is hypothesis-generating.
+**Differential methylation.** The 1,199 Taiwan Biobank participants with array data were profiled on
+the **Illumina Infinium MethylationEPIC** BeadChip, not the earlier 450K array: its manifest carries
+866,895 probes, of which the 863,904 `cg` sites are annotated on GRCh37/hg19 — the assembly the
+downstream gene-structure lookups use. Probes are restricted to those `cg` sites — dropping the 2,932
+`ch` non-CpG and 59 `rs` control probes — then to the autosomes, so that a group difference cannot
+simply reflect the sex imbalance between the groups. A reading is kept only when its detection p-value
+is below 0.001, and a probe only when every participant has a usable reading for it, so that no test
+runs on a varying subset. That cascade is 866,895 → 863,904 → 844,316 → **332,284** probes tested.
+
+Of those, 22 differ between the predicted groups at q < 0.05 and |log2FC| > 0.2, spanning 13 named
+genes including COL25A1 (`cg22266749`), PSMA6 (`cg02987832`) and ERV3-1 (`cg06513015`). Two caveats
+bound how far they should be read: the grouping variable is a model prediction rather than a
+measurement, and **no cross-reactive or SNP-overlap probe filter is applied** — the manifest's
+`SNP_ID`, `SNP_DISTANCE` and `SNP_MINORALLELEFREQUENCY` columns are carried but unused, and published
+cross-reactive probe lists are not consulted. These 22 probes are therefore hypothesis-generating
+candidates for follow-up, not a filtered final set.
 
 ## Repository layout
 
@@ -121,6 +133,13 @@ per-participant methylation tables rather than from the vendor array archive, wh
 restricted-access Taiwan Biobank data and is not distributed with this repository. The extraction step
 is kept in `src/methylation/extract.py` as the specification of how those tables were produced, for
 researchers with their own approved Taiwan Biobank methylation access.
+
+Those tables hold **already-normalised** beta values: the archive supplies one `*_nor.txt` export per
+participant with `AVG_Beta` and `Detection Pval` columns, and this pipeline applies no normalisation,
+background correction or batch adjustment of its own. Which normalisation the data provider ran is
+therefore outside this repository — anyone reproducing or extending the analysis should take that
+detail from the Taiwan Biobank methylation documentation accompanying their own data release, since it
+is not recoverable from the exports themselves.
 
 ## Citation
 
