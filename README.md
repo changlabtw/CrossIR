@@ -85,13 +85,14 @@ simply reflect the sex imbalance between the groups. A reading is kept only when
 is below 0.001, and a probe only when every participant has a usable reading for it, so that no test
 runs on a varying subset. That cascade is 866,895 → 863,904 → 844,316 → **332,284** probes tested.
 
-Of those, 22 differ between the predicted groups at q < 0.05 and |log2FC| > 0.2, spanning 13 named
-genes including COL25A1 (`cg22266749`), PSMA6 (`cg02987832`) and ERV3-1 (`cg06513015`). Two caveats
-bound how far they should be read: the grouping variable is a model prediction rather than a
-measurement, and **no cross-reactive or SNP-overlap probe filter is applied** — the manifest's
-`SNP_ID`, `SNP_DISTANCE` and `SNP_MINORALLELEFREQUENCY` columns are carried but unused, and published
-cross-reactive probe lists are not consulted. These 22 probes are therefore hypothesis-generating
-candidates for follow-up, not a filtered final set.
+Of those, 22 differ between the predicted groups at q < 0.05 and |log2FC| > 0.2, spanning 12 named
+genes including COL25A1 (`cg22266749`), PSMA6 (`cg02987832`) and ERV3-1 (`cg06513015`). The manifest
+annotates those probes with 13 symbols, but UBE2QP1 is an alias of UBE2Q2P1, the official symbol.
+Two caveats bound how far they should be read: the grouping variable is a model prediction rather
+than a measurement, and **no cross-reactive or SNP-overlap probe filter is applied** — the
+manifest's `SNP_ID`, `SNP_DISTANCE` and `SNP_MINORALLELEFREQUENCY` columns are carried but unused,
+and published cross-reactive probe lists are not consulted. These 22 probes are therefore
+hypothesis-generating candidates for follow-up, not a filtered final set.
 
 ## Repository layout
 

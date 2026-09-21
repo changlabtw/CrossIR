@@ -72,7 +72,7 @@ def over_representation(
         .reset_index(drop=True)
     )
     logger.info(
-        "Enrichment: %d terms below adjusted p %s, from %d genes across %d libraries",
+        "Enrichment: %d terms below adjusted p %s, from %d symbols across %d libraries",
         len(significant),
         alpha,
         len(genes),

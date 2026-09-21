@@ -554,3 +554,49 @@ def plot_enrichment_bars(
 
     plt.tight_layout()
     return _save(path)
+
+
+def add_panel_label(
+    source: str | Path,
+    label: str,
+    path: str | Path,
+    strip_fraction: float = 0.06,
+) -> Path:
+    """Write a copy of a saved figure with a panel letter above it.
+
+    The label is placed in a strip added to the top of the image rather than
+    drawn over the plot, so no pixel of the original figure is covered. The
+    strip takes its colour from the source image's top-left pixel, which makes
+    the join invisible on the white backgrounds matplotlib writes.
+
+    Args:
+        source: PNG written by one of the plotting functions.
+        label: Panel letter as it should appear, for example ``"(a)"``.
+        path: Destination PNG path.
+        strip_fraction: Strip height as a fraction of the image width. The font
+            is sized to fill it, so this sets the letter size too.
+
+    Returns:
+        The path written to.
+    """
+    from matplotlib import font_manager
+    from PIL import Image, ImageDraw, ImageFont
+
+    source_image = Image.open(source).convert("RGB")
+    strip = max(24, round(source_image.width * strip_fraction))
+    font = ImageFont.truetype(
+        font_manager.findfont(font_manager.FontProperties(family="DejaVu Sans", weight="bold")),
+        size=round(strip * 0.7),
+    )
+
+    labelled = Image.new(
+        "RGB", (source_image.width, source_image.height + strip), source_image.getpixel((0, 0))
+    )
+    labelled.paste(source_image, (0, strip))
+    ImageDraw.Draw(labelled).text((strip // 2, strip // 2), label, font=font, fill=(0, 0, 0), anchor="lm")
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    labelled.save(path)
+    logger.info("Wrote %s", display_path(path))
+    return path
