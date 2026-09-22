@@ -30,3 +30,6 @@ pillow==11.0.0
 jupyterlab==4.3.4
 PyYAML==6.0.2
 requests==2.32.3
+
+# Development only; not needed to reproduce any result.
+pytest==8.3.4

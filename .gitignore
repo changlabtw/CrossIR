@@ -28,5 +28,3 @@ configs/paths.local.yaml
 
 # Internal working documents, not part of the published repository
 docs/
-CLAUDE.md
-src/validate.py

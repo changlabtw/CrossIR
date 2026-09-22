@@ -57,7 +57,7 @@
 
 \node[external, below=10mm of pooled] (twb)
   {\textbf{Taiwan Biobank}\\$n = 92{,}734$, no fasting-insulin measurement\\[1pt]
-   IR status predicted by the final model};
+   IR status predicted by the 20-feature CatBoost model};
 \draw[flow] (pooled) -- (twb);
 
 \node[omics, below=10mm of twb] (met)

@@ -26,7 +26,7 @@ flowchart TB
     NHANES["NHANES<br/>Non-diabetic adults<br/>n = 11,660"]
     KNHANES["KNHANES<br/>Non-diabetic adults<br/>n = 15,138"]
     POOLED["Pooled training set<br/>n = 26,798<br/>Gradient-boosting classifiers<br/>IR defined as HOMA-IR &gt; 2.5"]
-    TWB["Taiwan Biobank<br/>n = 92,734, no fasting-insulin measurement<br/>IR status predicted by the final model"]
+    TWB["Taiwan Biobank<br/>n = 92,734, no fasting-insulin measurement<br/>IR status predicted by the 20-feature CatBoost model"]
     MET["Methylation subset<br/>n = 1,199 with EPIC array data<br/>Compared by predicted IR status"]
 
     NHANES -.-|bidirectional transfer| KNHANES
@@ -72,9 +72,17 @@ computed on it. It is used to ask whether the model's predictions behave like re
 Reducing 241 engineered features to the twenty most influential costs nothing measurable, which is the
 practical result: the deployable model needs twenty inputs.
 
-**Cross-cohort transfer**, each model scored on the entire cohort it never saw: NHANES → KNHANES
-AUC 0.862, KNHANES → NHANES AUC 0.860. Performance survives the ethnic transfer with a modest
-penalty against the within-cohort ceiling of 0.868 and 0.878.
+**Cross-cohort transfer.** Each of the four classifiers is scored on the whole cohort it never saw,
+in both directions, so that the direction of transfer is not confounded with the choice of
+algorithm. Discrimination barely moves with either: AUC is 0.861–0.862 sending NHANES to KNHANES and
+0.860–0.862 sending KNHANES to NHANES, against within-cohort ceilings of 0.868 and 0.878.
+
+The operating point is what changes, and it inverts with direction. A NHANES-trained model reaching
+KNHANES is conservative — sensitivity around 0.62 against specificity around 0.88 — while a
+KNHANES-trained model reaching NHANES is the mirror image, sensitivity around 0.89 against
+specificity around 0.61. All four algorithms agree in both directions, so this is a property of the
+shift between the cohorts rather than of any one model, and it is the argument for pooling: neither
+single-population model carries its threshold across.
 
 **Differential methylation.** The 1,199 Taiwan Biobank participants with array data were profiled on
 the **Illumina Infinium MethylationEPIC** BeadChip, not the earlier 450K array: its manifest carries
@@ -123,6 +131,13 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+The reported results were produced under conda, so `environment.yml` recreates that environment
+exactly if you prefer it:
+
+```bash
+conda env create -f environment.yml && conda activate crossir
+```
+
 Place the raw cohort files under `data/raw/` following the layout in `configs/cohorts.yaml`. To read
 them from somewhere else, create `configs/paths.local.yaml` overriding only the keys you need:
 
@@ -132,8 +147,9 @@ raw_data_root: /path/to/your/data/raw
 
 ## Reproducing the analysis
 
-Run the notebooks in order. Each reads from `data/processed/` and writes to `output/`, so a run
-leaves every table and figure in the repository regenerated.
+Run `./run_all.sh`, which executes the notebooks in the order they depend on each other. Each reads
+from `data/processed/` and writes to `output/`, so a run leaves every table and figure in the
+repository regenerated.
 
 | # | Notebook | Produces |
 |---|---|---|
@@ -141,8 +157,8 @@ leaves every table and figure in the repository regenerated.
 | 02 | `02_descriptive_statistics.ipynb` | `stats.xlsx` and `stats_original.xlsx`, boxplots, correlation matrix, HOMA-IR distributions |
 | 03 | `03_homair_regression.ipynb` | Continuous HOMA-IR regression across six models |
 | 04 | `04_feature_ablation.ipynb` | 9 / 17 / 57 / 241 feature sets compared |
-| 05 | `05_cross_ethnic.ipynb` | Within-cohort hold-out and cross-cohort transfer |
-| 06 | `06_final_model_and_shap.ipynb` | Pooled model, SHAP (default and colour-blind palettes), top-20 retrain, `models/` |
+| 05 | `05_cross_ethnic.ipynb` | Within-cohort hold-out, and every model scored on the other cohort |
+| 06 | `06_final_model_and_shap.ipynb` | Pooled model, SHAP (default and colour-blind palettes), top-20 retrain, panel-labelled figures, `models/` |
 | 07 | `07_twb_validation.ipynb` | Taiwan Biobank scoring, TG/HDL-C comparison, Q-Q plot |
 | 08 | `08_differential_methylation.ipynb` | Volcano plot, `met-point.xlsx`, `candidate.csv`, enrichment |
 
@@ -153,6 +169,10 @@ Notebooks 02–05 depend only on 01 and can otherwise run in any order.
 Notebook 08 takes about twelve minutes, most of it 1.3 million statistical tests; everything else
 runs in seconds to a few minutes.
 
+`pytest tests/` runs without any cohort data. Alongside unit tests of the label definition, the
+feature generator and the multiple-testing correction, it re-derives every number quoted in this
+README from the committed files in `output/` and `models/`, so the two cannot drift apart.
+
 **Figure colours.** Five figures use colour to carry meaning in a way that fails for the common forms
 of colour vision deficiency, and each has a `_color_blind.png` sibling drawn from the
 [Okabe–Ito palette](src/viz/palettes.py): `correlation_matrix` (a red-to-blue diverging scale),
@@ -160,8 +180,15 @@ of colour vision deficiency, and each has a `_color_blind.png` sibling drawn fro
 categorical palette pairing red with green), and `HOMA-IR` and `qqplot_NHANES+KNHANES_vs_TWB` (red
 reference lines). `SHAP_summary_plot_new` has one for the same reason. The remaining figures already
 encode safely and have no sibling: `ConfusionMatrix_CatBoost` is a single-hue sequential map,
-`ROC_PR_CatBoost` is orange on blue, and the three boxplots separate IR− from IR+ with blue and
-orange. In every pair the data, axes and ordering are identical — only the palette differs.
+`ROC_PR_CatBoost` is orange on blue, and the three boxplots — `boxplot_of_variable_by_IR_and_Race`,
+`boxplot_of_variable_by_IR_and_Race(Add TWB)` and `boxplot_of_TG_HDL_C_by_IR_and_Datasets` — separate
+IR− from IR+ with blue and orange. In every pair the data, axes and ordering are identical — only the palette differs.
+
+**Panel labels.** The two halves of the discrimination figure are written as separate files, so
+`ROC_PR_CatBoost_a.png` and `ConfusionMatrix_CatBoost_b.png` are copies carrying the panel letters
+(a) and (b) for use in a manuscript. The letter sits in a strip added above the plot rather than
+drawn over it, so the unlabelled originals and the labelled copies are pixel-identical everywhere
+the figure itself is drawn.
 
 ## Data availability
 

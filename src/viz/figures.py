@@ -15,7 +15,7 @@ import polars as pl
 import seaborn as sns
 from sklearn.metrics import auc, precision_recall_curve, roc_auc_score, roc_curve
 
-from src.data.io import display_path
+from src.data.io import HOMAIR_CUTOFF, display_path
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +32,6 @@ CORRELATION_EXCLUDED = [
 ]
 """Identifiers, the target, and the quantity the target is derived from."""
 
-HOMAIR_CUTOFF = 2.5
-"""Cut-off drawn as a dashed line on the HOMA-IR distributions."""
 
 
 def plot_feature_boxplots(df: pl.DataFrame, title: str, path: str | Path) -> Path:

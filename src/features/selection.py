@@ -52,9 +52,9 @@ INTERACTION_PATTERN = "^.*[mul|log|div|sqrt].*$"
 Note:
     Written as a character class, so it matches any column whose name contains
     any of the letters in ``mul|logdivsqrt`` -- far more than the intended four
-    suffixes. It happens to select the right columns for this schema, and is
-    reproduced verbatim rather than corrected, because narrowing it could change
-    which columns reach the model.
+    suffixes. On this schema it still selects exactly the generated columns, and
+    it is kept as written rather than narrowed, because a narrower pattern would
+    change which columns reach the model and therefore every result below.
 """
 
 

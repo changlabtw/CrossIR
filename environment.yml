@@ -1,0 +1,18 @@
+# Conda environment matching the one the reported results were produced in.
+#
+# The pip versions below are the same pins as requirements.txt; that file remains
+# the single list, and this one exists because the analysis was run under conda
+# and a reader reproducing it exactly should be able to recreate that.
+#
+#     conda env create -f environment.yml
+#     conda activate crossir
+name: crossir
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.12.8
+  - pip
+  - pip:
+      - -r requirements.txt
