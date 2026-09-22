@@ -12,6 +12,8 @@ is the precision at which they are reported.
 import logging
 
 import numpy as np
+import polars as pl
+import statsmodels.api as sm
 from sklearn.metrics import (
     auc,
     confusion_matrix,
@@ -27,6 +29,24 @@ DECISION_THRESHOLD = 0.5
 
 METRIC_DECIMALS = 3
 """Decimal places every reported metric is rounded to."""
+
+BOOTSTRAP_RESAMPLES = 1000
+"""Resamples drawn for a confidence interval."""
+
+BOOTSTRAP_RANDOM_STATE = 30
+"""Seed for the resampling, so a reported interval is reproducible.
+
+The same value as :data:`src.models.train.RANDOM_STATE`, restated here rather
+than imported so that scoring a saved model does not pull in the training
+module and the three boosting libraries with it.
+"""
+
+CALIBRATION_BINS = 10
+"""Bins of predicted probability in a reliability diagram.
+
+Quantile bins, so each holds the same number of participants and none comes back
+empty at the sparse upper end of the predicted range.
+"""
 
 
 def compute_metrics(
@@ -236,3 +256,127 @@ def cohens_d(x, y) -> float:
         (len(x) - 1) * x.std(ddof=1) ** 2 + (len(y) - 1) * y.std(ddof=1) ** 2
     ) / (len(x) + len(y) - 2)
     return (x.mean() - y.mean()) / np.sqrt(pooled_variance)
+
+
+def bootstrap_metrics(
+    y_true,
+    preds: np.ndarray,
+    n_resamples: int = BOOTSTRAP_RESAMPLES,
+    random_state: int = BOOTSTRAP_RANDOM_STATE,
+    threshold: float = DECISION_THRESHOLD,
+) -> pl.DataFrame:
+    """Percentile confidence intervals for every metric, by resampling the test set.
+
+    Participants are drawn with replacement and :func:`compute_metrics` is
+    recomputed on each resample, so an interval is built from exactly the
+    quantities the study reports. Nothing is refitted: the model's predicted
+    probabilities are resampled alongside the labels, which is what makes this
+    cheap enough to run on every reported row.
+
+    Note:
+        The interval covers sampling variation in the *test set* only. It says
+        nothing about variation from a different train/test split, a different
+        hyperparameter search, or a different cohort.
+
+    Args:
+        y_true: Observed binary labels.
+        preds: Predicted probability of the positive class.
+        n_resamples: Resamples to draw.
+        random_state: Seed for the resampling, so the interval is reproducible.
+        threshold: Probability above which a prediction counts as positive.
+
+    Returns:
+        One row per metric with ``metric``, ``estimate`` on the full test set,
+        and the 2.5th and 97.5th percentiles as ``ci_lower`` and ``ci_upper``.
+    """
+    y_true = np.asarray(y_true)
+    preds = np.asarray(preds)
+
+    point = compute_metrics(y_true, preds, threshold)
+    names = [key for key, value in point.items() if isinstance(value, float) and key != "optimal_threshold"]
+
+    generator = np.random.default_rng(random_state)
+    draws = {name: [] for name in names}
+    for _ in range(n_resamples):
+        index = generator.integers(0, len(y_true), len(y_true))
+        resampled = compute_metrics(y_true[index], preds[index], threshold)
+        for name in names:
+            draws[name].append(resampled[name])
+
+    logger.info("Bootstrapped %d metrics over %d resamples", len(names), n_resamples)
+    return pl.DataFrame(
+        {
+            "metric": names,
+            "estimate": [point[name] for name in names],
+            "ci_lower": [round(float(np.percentile(draws[name], 2.5)), METRIC_DECIMALS) for name in names],
+            "ci_upper": [round(float(np.percentile(draws[name], 97.5)), METRIC_DECIMALS) for name in names],
+        }
+    )
+
+
+def calibration_table(y_true, preds: np.ndarray, n_bins: int = CALIBRATION_BINS) -> pl.DataFrame:
+    """Group predictions into bins and compare each bin's mean to what happened.
+
+    A reliability diagram plots the two columns against each other: a
+    well-calibrated model puts them on the diagonal, so that a predicted
+    probability of 0.3 is borne out in about 30% of those participants.
+
+    Args:
+        y_true: Observed binary labels.
+        preds: Predicted probability of the positive class.
+        n_bins: Number of quantile bins.
+
+    Returns:
+        One row per bin with ``bin``, ``mean_predicted``, ``observed``, ``n``.
+    """
+    y_true = np.asarray(y_true).astype(float)
+    preds = np.asarray(preds)
+
+    edges = np.quantile(preds, np.linspace(0, 1, n_bins + 1))
+    edges[0], edges[-1] = -np.inf, np.inf
+    assignment = np.digitize(preds, edges[1:-1])
+
+    rows = []
+    for index in range(n_bins):
+        selected = assignment == index
+        if not selected.any():
+            continue
+        rows.append(
+            {
+                "bin": index + 1,
+                "mean_predicted": float(preds[selected].mean()),
+                "observed": float(y_true[selected].mean()),
+                "n": int(selected.sum()),
+            }
+        )
+    return pl.DataFrame(rows)
+
+
+def calibration_summary(y_true, preds: np.ndarray) -> dict:
+    """Brier score with the calibration intercept and slope.
+
+    The intercept and slope come from a logistic regression of the outcome on
+    the logit of the prediction. A model whose probabilities mean what they say
+    has intercept 0 and slope 1; a slope below 1 marks predictions that are too
+    extreme in both directions, and a non-zero intercept marks a systematic
+    over- or under-estimate of risk.
+
+    Args:
+        y_true: Observed binary labels.
+        preds: Predicted probability of the positive class.
+
+    Returns:
+        Mapping with ``brier_score``, ``calibration_intercept`` and
+        ``calibration_slope``.
+    """
+    y_true = np.asarray(y_true).astype(float)
+    preds = np.clip(np.asarray(preds), 1e-12, 1 - 1e-12)
+
+    logit = np.log(preds / (1 - preds))
+    fitted = sm.Logit(y_true, sm.add_constant(logit)).fit(disp=0)
+
+    return {
+        "brier_score": round(float(np.mean((preds - y_true) ** 2)), METRIC_DECIMALS),
+        "calibration_intercept": round(float(fitted.params[0]), METRIC_DECIMALS),
+        "calibration_slope": round(float(fitted.params[1]), METRIC_DECIMALS),
+    }

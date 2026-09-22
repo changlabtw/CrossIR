@@ -72,6 +72,23 @@ computed on it. It is used to ask whether the model's predictions behave like re
 Reducing 241 engineered features to the twenty most influential costs nothing measurable, which is the
 practical result: the deployable model needs twenty inputs.
 
+**Uncertainty.** Resampling the 8,040-participant test set 1,000 times with replacement puts a 95%
+interval around each figure above. For the deployed twenty-feature model: AUC 0.880 (0.872–0.887),
+sensitivity 0.785 (0.769–0.799), NPV 0.874 (0.864–0.882). Every model's AUC interval overlaps every
+other's, which is the quantitative form of the sentence above. The interval covers sampling variation
+in the test set alone — not a different split, a different hyperparameter search or a different
+cohort. Full table in `output/final_model_ci.xlsx`.
+
+**Calibration.** The model ranks participants well and scores them too high. The calibration slope is
+1.02, so the shape of the relationship is right, but the intercept is −0.574: mean predicted
+probability is 0.43 against an observed prevalence of 0.351, and all ten deciles fall below the
+diagonal (Brier score 0.139; see `Calibration_CatBoost.png`). This is the intended cost of the class
+weighting — positives are up-weighted by the negative-to-positive ratio precisely to buy sensitivity,
+and that inflates the probabilities. Two consequences are worth stating plainly. The sensitivity,
+specificity and NPV above are empirical counts at a 0.5 threshold and are unaffected by it. But the
+raw predicted probability should not be read as an absolute risk without recalibration. Taiwan
+Biobank carries no observed label, so no calibration can be computed there.
+
 **Cross-cohort transfer.** Each of the four classifiers is scored on the whole cohort it never saw,
 in both directions, so that the direction of transfer is not confounded with the choice of
 algorithm. Discrimination barely moves with either: AUC is 0.861–0.862 sending NHANES to KNHANES and
@@ -158,13 +175,13 @@ repository regenerated.
 | 03 | `03_homair_regression.ipynb` | Continuous HOMA-IR regression across six models |
 | 04 | `04_feature_ablation.ipynb` | 9 / 17 / 57 / 241 feature sets compared |
 | 05 | `05_cross_ethnic.ipynb` | Within-cohort hold-out, and every model scored on the other cohort |
-| 06 | `06_final_model_and_shap.ipynb` | Pooled model, SHAP (default and colour-blind palettes), top-20 retrain, panel-labelled figures, `models/` |
-| 07 | `07_twb_validation.ipynb` | Taiwan Biobank scoring, TG/HDL-C comparison, Q-Q plot |
+| 06 | `06_final_model_and_shap.ipynb` | Pooled model, SHAP (default and colour-blind palettes), top-20 retrain, bootstrap intervals, calibration, panel-labelled figures, `models/` |
+| 07 | `07_twb_validation.ipynb` | Taiwan Biobank scoring, `stats_twb.xlsx` and `stats_twb_original.xlsx`, TG/HDL-C comparison, Q-Q plot |
 | 08 | `08_differential_methylation.ipynb` | Volcano plot, `met-point.xlsx`, `candidate.csv`, enrichment |
 
-Two ordering constraints: **02 must run before 07**, which appends a fourth sheet to the workbooks 02
-creates; and **07 must run before 08**, which splits participants by the label 07 predicts.
-Notebooks 02–05 depend only on 01 and can otherwise run in any order.
+The orderings that matter are the data dependencies: **01 first**, since everything reads the tables
+it writes, and then **06 → 07 → 08**, because 07 scores Taiwan Biobank with the model 06 saves and 08
+splits participants by the label 07 predicts. Notebooks 02–05 need only 01 and can run in any order.
 
 Notebook 08 takes about twelve minutes, most of it 1.3 million statistical tests; everything else
 runs in seconds to a few minutes.
@@ -183,6 +200,10 @@ encode safely and have no sibling: `ConfusionMatrix_CatBoost` is a single-hue se
 `ROC_PR_CatBoost` is orange on blue, and the three boxplots — `boxplot_of_variable_by_IR_and_Race`,
 `boxplot_of_variable_by_IR_and_Race(Add TWB)` and `boxplot_of_TG_HDL_C_by_IR_and_Datasets` — separate
 IR− from IR+ with blue and orange. In every pair the data, axes and ordering are identical — only the palette differs.
+
+`Calibration_CatBoost.png` is drawn from the same palette from the start — blue and orange, with the
+diagonal in neutral grey and the two models additionally separated by marker shape — so it needs no
+sibling either.
 
 **Panel labels.** The two halves of the discrimination figure are written as separate files, so
 `ROC_PR_CatBoost_a.png` and `ConfusionMatrix_CatBoost_b.png` are copies carrying the panel letters

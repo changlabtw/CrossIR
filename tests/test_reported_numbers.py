@@ -31,17 +31,17 @@ def readme_table_row(label: str) -> list[str]:
 # --- cohort counts ------------------------------------------------------------
 
 @pytest.mark.parametrize(
-    "label, sheet_name",
+    "label, workbook, sheet_name",
     [
-        ("NHANES 1999–2012", "NHANES"),
-        ("KNHANES 2019–2021", "KNHANES"),
-        ("Pooled training set", "COMBINE"),
-        ("Taiwan Biobank (external)", "TWB(predict)"),
+        ("NHANES 1999–2012", "stats.xlsx", "NHANES"),
+        ("KNHANES 2019–2021", "stats.xlsx", "KNHANES"),
+        ("Pooled training set", "stats.xlsx", "COMBINE"),
+        ("Taiwan Biobank (external)", "stats_twb.xlsx", "TWB(predict)"),
     ],
 )
-def test_cohort_counts_match_stats_workbook(label, sheet_name):
+def test_cohort_counts_match_stats_workbook(label, workbook, sheet_name):
     analysed, positives = readme_table_row(label)[2:4]
-    counts = sheet("stats.xlsx", sheet_name=sheet_name)
+    counts = sheet(workbook, sheet_name=sheet_name)
     row = counts[counts[counts.columns[0]] == "N"].iloc[0]
 
     assert analysed == row["All"], f"{label}: analysed n"
@@ -176,3 +176,61 @@ def test_every_figure_is_accounted_for():
     # A leading underscore is the README naming a suffix, not a file.
     for referenced in re.findall(r"`([A-Za-z0-9+][A-Za-z0-9_+\-]*)\.png`", README):
         assert (ROOT / "output" / f"{referenced}.png").exists(), f"README names a missing figure: {referenced}"
+
+
+# --- uncertainty and calibration -----------------------------------------------
+
+def test_quoted_intervals_match_the_bootstrap_workbook():
+    """Each interval the README quotes, and the claim that they all overlap."""
+    intervals = sheet("final_model_ci.xlsx")
+    deployed = intervals[
+        (intervals.feature_set == "top 20 by SHAP") & (intervals.model == "CatBoost")
+    ].set_index("metric")
+
+    quoted = re.findall(r"(AUC|sensitivity|NPV) (\d\.\d+) \((\d\.\d+)–(\d\.\d+)\)", README)
+    assert len(quoted) == 3, "the uncertainty sentence no longer quotes three intervals"
+
+    for name, estimate, lower, upper in quoted:
+        metric = {"AUC": "roc_auc", "sensitivity": "sensitivity(recall)", "NPV": "NPV"}[name]
+        row = deployed.loc[metric]
+        assert (float(estimate), float(lower), float(upper)) == (
+            row.estimate,
+            row.ci_lower,
+            row.ci_upper,
+        ), f"{name} interval"
+
+    auc = intervals[intervals.metric == "roc_auc"]
+    assert auc.ci_lower.max() <= auc.ci_upper.min(), "the README says every AUC interval overlaps"
+
+
+def test_every_interval_contains_its_estimate():
+    intervals = sheet("final_model_ci.xlsx")
+    outside = intervals[
+        (intervals.estimate < intervals.ci_lower) | (intervals.estimate > intervals.ci_upper)
+    ]
+    assert outside.empty, f"intervals not containing their estimate:\n{outside}"
+
+
+def test_quoted_calibration_matches_the_workbook():
+    summary = sheet("calibration.xlsx", sheet_name="summary")
+    deployed = summary[summary.model == "CatBoost (top 20)"].iloc[0]
+    full = summary[summary.model == "CatBoost (241 features)"].iloc[0]
+
+    slope = re.search(r"calibration slope is\s+(\d\.\d+)", README)
+    intercept = re.search(r"the intercept is −(\d\.\d+)", README)
+    brier = re.search(r"Brier score (\d\.\d+)", README)
+    assert slope and intercept and brier, "the calibration sentence no longer has the expected shape"
+
+    assert float(slope.group(1)) == full.calibration_slope
+    assert -float(intercept.group(1)) == full.calibration_intercept
+    assert float(brier.group(1)) == full.brier_score == deployed.brier_score
+
+
+def test_calibration_bins_cover_the_test_set():
+    """The deciles must account for every participant, at equal size."""
+    bins = sheet("calibration.xlsx", sheet_name="CatBoost (top 20)")
+    performance = sheet("final_model_performance.xlsx")
+    row = performance[performance.feature_set == "top 20 by SHAP"].iloc[0]
+
+    assert bins.n.sum() == row.TP + row.TN + row.FP + row.FN
+    assert bins.n.nunique() == 1, "quantile bins should hold equal numbers"

@@ -16,6 +16,7 @@ import seaborn as sns
 from sklearn.metrics import auc, precision_recall_curve, roc_auc_score, roc_curve
 
 from src.data.io import HOMAIR_CUTOFF, display_path
+from src.viz.palettes import NEUTRAL_GREY, OKABE_ITO
 
 logger = logging.getLogger(__name__)
 
@@ -251,6 +252,66 @@ def plot_confusion_matrix(confusion: dict, title: str, path: str | Path) -> Path
     plt.xlabel("Predicted Label", fontsize=12)
     plt.ylabel("True Label", fontsize=12)
     plt.tight_layout()
+    return _save(path)
+
+
+
+def plot_calibration(curves: dict, predictions: dict, title: str, path: str | Path) -> Path:
+    """Draw a reliability diagram, with the distribution of predictions beneath it.
+
+    The upper panel plots each bin's mean predicted probability against the
+    fraction of that bin who were actually insulin resistant. A model whose
+    probabilities mean what they say lies on the diagonal. The lower panel shows
+    where the predictions themselves fall, because a curve is only as trustworthy
+    as the number of participants behind each of its points.
+
+    Note:
+        Drawn from the Okabe-Ito palette, so it needs no colour-blind sibling.
+        The two models are additionally distinguished by marker shape, so the
+        figure survives being printed in greyscale.
+
+    Args:
+        curves: Model name mapped to the frame returned by
+            :func:`src.models.evaluate.calibration_table`.
+        predictions: The same model names mapped to their predicted
+            probabilities, which the lower panel histograms.
+        title: Name used in the title.
+        path: Destination PNG path.
+
+    Returns:
+        The path written to.
+    """
+    colours = [OKABE_ITO["blue"], OKABE_ITO["orange"]]
+    markers = ["o", "s"]
+
+    figure, axes = plt.subplots(
+        2, 1, figsize=(7, 8), sharex=True, gridspec_kw={"height_ratios": [3, 1]}
+    )
+
+    axes[0].plot([0, 1], [0, 1], linestyle="--", linewidth=1, color=NEUTRAL_GREY, label="Perfect calibration")
+    for index, (name, table) in enumerate(curves.items()):
+        axes[0].plot(
+            table["mean_predicted"],
+            table["observed"],
+            marker=markers[index % len(markers)],
+            color=colours[index % len(colours)],
+            label=name,
+        )
+        axes[1].hist(
+            predictions[name],
+            bins=50,
+            range=(0, 1),
+            histtype="step",
+            color=colours[index % len(colours)],
+        )
+
+    axes[0].set_ylabel("Observed frequency", fontsize=12)
+    axes[0].set_title(f"Calibration: {title}", fontsize=16)
+    axes[0].legend(loc="upper left")
+    axes[1].set_xlabel("Predicted probability of insulin resistance", fontsize=12)
+    axes[1].set_ylabel("Participants", fontsize=12)
+
+    figure.tight_layout()
     return _save(path)
 
 

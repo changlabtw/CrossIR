@@ -2,10 +2,10 @@
 #
 # Run the whole analysis, in the order the notebooks depend on each other.
 #
-# Two orderings are load-bearing and are the reason this is a script rather than
-# "run the notebooks": 02 must precede 07, which appends a fourth sheet to the
-# workbooks 02 writes, and 07 must precede 08, which splits participants by the
-# label 07 predicts. Notebooks 02-05 depend only on 01.
+# The orderings that matter are data dependencies: 01 writes the tables everything
+# else reads, then 06 -> 07 -> 08, because 07 scores Taiwan Biobank with the model
+# 06 saves and 08 splits participants by the label 07 predicts. Notebooks 02-05
+# need only 01 and can run in any order.
 #
 # Raw cohort files must already be in place; see the Data availability section of
 # README.md. Expect roughly 25 minutes, most of it notebook 08.
