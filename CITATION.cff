@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software or its results, please cite it as below."
-title: "Cross-ethnic machine learning prediction of insulin resistance in non-diabetic adults"
+title: "Cross-ethnic machine learning identifies insulin resistance in non-diabetic adults and its DNA methylation correlates"
 abstract: >-
   Analysis code for a gradient boosting model that predicts insulin resistance
   (HOMA-IR > 2.5) in non-diabetic adults from routine clinical measurements,
