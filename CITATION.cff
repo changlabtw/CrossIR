@@ -39,6 +39,7 @@ keywords:
   - KNHANES
   - Taiwan Biobank
 
-# Fill both in once the GitHub repository exists and Zenodo has minted the DOI.
-# repository-code: "https://github.com/<owner>/<repo>"
+repository-code: "https://github.com/changlabtw/CrossIR"
+
+# Fill in once Zenodo has minted the DOI.
 # doi: "10.5281/zenodo.XXXXXXX"
