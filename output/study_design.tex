@@ -39,10 +39,12 @@
 ]
 
 \node[cohort] (nhanes) {\textbf{NHANES}\\Non-diabetic adults\\$n = 11{,}660$};
-\node[cohort, right=26mm of nhanes] (knhanes)
+\node[cohort, right=42mm of nhanes] (knhanes)
   {\textbf{KNHANES}\\Non-diabetic adults\\$n = 15{,}138$};
 
-\draw[transfer] (nhanes) -- node[note, above, align=center]
+% The two cohorts sit at the same height, with the transfer between them; the
+% gap is wide enough for the label to sit on the line rather than above it.
+\draw[transfer] (nhanes) -- node[note, fill=white, inner sep=2pt, align=center]
   {bidirectional\\transfer} (knhanes);
 
 \coordinate (mid) at ($(nhanes)!0.5!(knhanes)$);

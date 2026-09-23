@@ -1,4 +1,4 @@
-# Cross-ethnic machine learning prediction of insulin resistance
+# Cross-ethnic machine learning identifies insulin resistance in non-diabetic adults and its DNA methylation correlates
 
 <!-- Replace XXXXXXX with the Zenodo record id once the DOI is minted. -->
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
@@ -22,16 +22,19 @@ fasting-insulin measurement and therefore no observed label, and the subset of t
 methylation array data is compared by predicted IR status.
 
 ```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 90, 'rankSpacing': 55, 'wrappingWidth': 340}}}%%
 flowchart TB
-    NHANES["NHANES<br/>Non-diabetic adults<br/>n = 11,660"]
-    KNHANES["KNHANES<br/>Non-diabetic adults<br/>n = 15,138"]
+    subgraph COHORTS[" "]
+        direction LR
+        NHANES["NHANES<br/>Non-diabetic adults<br/>n = 11,660"]
+        KNHANES["KNHANES<br/>Non-diabetic adults<br/>n = 15,138"]
+        NHANES <-.->|bidirectional transfer| KNHANES
+    end
     POOLED["Pooled training set<br/>n = 26,798<br/>Gradient-boosting classifiers<br/>IR defined as HOMA-IR &gt; 2.5"]
     TWB["Taiwan Biobank<br/>n = 92,734, no fasting-insulin measurement<br/>IR status predicted by the 20-feature CatBoost model"]
     MET["Methylation subset<br/>n = 1,199 with EPIC array data<br/>Compared by predicted IR status"]
 
-    NHANES -.-|bidirectional transfer| KNHANES
-    NHANES --> POOLED
-    KNHANES --> POOLED
+    COHORTS --> POOLED
     POOLED --> TWB
     TWB --> MET
 
@@ -44,6 +47,7 @@ flowchart TB
     class POOLED pooled
     class TWB external
     class MET omics
+    style COHORTS fill:none,stroke:none
 ```
 
 The same figure is available as TikZ in [`output/study_design.tex`](output/study_design.tex) for the
