@@ -41,5 +41,6 @@ keywords:
 
 repository-code: "https://github.com/changlabtw/CrossIR"
 
-# Fill in once Zenodo has minted the DOI.
-# doi: "10.5281/zenodo.XXXXXXX"
+# Concept DOI, which always resolves to the newest archived version. The DOI for
+# this release alone is 10.5281/zenodo.23018638.
+doi: "10.5281/zenodo.23018637"

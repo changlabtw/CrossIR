@@ -1,7 +1,7 @@
 # Cross-ethnic machine learning identifies insulin resistance in non-diabetic adults and its DNA methylation correlates
 
-<!-- Replace XXXXXXX with the Zenodo record id once the DOI is minted. -->
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+<!-- Concept DOI: always resolves to the newest version. v1.0.0 is 10.5281/zenodo.23018638. -->
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23018637.svg)](https://doi.org/10.5281/zenodo.23018637)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Analysis code for a gradient boosting model that predicts insulin resistance in non-diabetic adults
