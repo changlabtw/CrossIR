@@ -12,7 +12,7 @@
 
 \documentclass[border=8pt]{standalone}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, calc}
+\usetikzlibrary{arrows.meta, positioning, calc, fit}
 
 % Okabe-Ito
 \definecolor{oiBlue}{HTML}{0072B2}
@@ -36,6 +36,7 @@
   transfer/.style={{Stealth[length=2.4mm]}-{Stealth[length=2.4mm]},
                    line width=0.9pt, draw=oiBlue, dashed},
   note/.style={font=\sffamily\scriptsize\itshape, text=oiGrey},
+  group/.style={draw=oiGrey, dashed, rounded corners=3pt, line width=0.7pt, inner sep=4mm},
 ]
 
 \node[cohort] (nhanes) {\textbf{NHANES}\\Non-diabetic adults\\$n = 11{,}660$};
@@ -47,6 +48,10 @@
 \draw[transfer] (nhanes) -- node[note, fill=white, inner sep=2pt, align=center]
   {bidirectional\\transfer} (knhanes);
 
+% The two training cohorts are one block: a single arrow leaves it for the
+% pooled set, rather than one arrow per cohort.
+\node[group, fit=(nhanes)(knhanes)] (cohorts) {};
+
 \coordinate (mid) at ($(nhanes)!0.5!(knhanes)$);
 
 \node[pooled, below=16mm of mid] (pooled)
@@ -54,8 +59,7 @@
    Gradient-boosting classifiers\\
    IR defined as HOMA-IR $> 2.5$};
 
-\draw[flow] (nhanes.south) -- ++(0,-6mm) -| (pooled.north);
-\draw[flow] (knhanes.south) -- ++(0,-6mm) -| (pooled.north);
+\draw[flow] (cohorts.south) -- (pooled.north);
 
 \node[external, below=10mm of pooled] (twb)
   {\textbf{Taiwan Biobank}\\$n = 92{,}734$, no fasting-insulin measurement\\[1pt]

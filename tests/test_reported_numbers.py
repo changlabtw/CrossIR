@@ -7,6 +7,7 @@ otherwise reach a reader as a contradiction.
 """
 
 import re
+import subprocess
 from pathlib import Path
 
 import pandas as pd
@@ -234,3 +235,50 @@ def test_calibration_bins_cover_the_test_set():
 
     assert bins.n.sum() == row.TP + row.TN + row.FP + row.FN
     assert bins.n.nunique() == 1, "quantile bins should hold equal numbers"
+
+
+# --- the repository matches the README's description of it --------------------
+
+def tracked_top_level() -> set[str]:
+    """Every entry git tracks at the top of the repository."""
+    listing = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.splitlines()  # a figure filename contains a space, so not split()
+    return {path.split("/")[0] for path in listing} - {".gitignore"}
+
+
+def layout_block() -> str:
+    """The fenced block under the Repository layout heading."""
+    section = README.split("## Repository layout", 1)[1]
+    return section.split("```")[1]
+
+
+def test_layout_block_names_everything_the_repository_holds():
+    """A directory or file added to the repository must be described in the README."""
+    block = layout_block()
+    missing = sorted(entry for entry in tracked_top_level() if entry not in block)
+    assert not missing, f"tracked but absent from the layout block: {missing}"
+
+
+def test_layout_block_invents_nothing():
+    """Every path the layout block names must exist, tracked or deliberately empty."""
+    described = re.findall(r"^\s*([A-Za-z0-9_.\-]+/?)\s{2,}", layout_block(), re.M)
+    for name in {entry.rstrip("/") for entry in described}:
+        matches = list(ROOT.glob(f"{name}")) + list(ROOT.glob(f"*/{name}"))
+        assert matches, f"the layout block names {name!r}, which does not exist"
+
+
+def test_data_directories_are_visible_but_empty():
+    """The data tree is on GitHub so the layout is legible; its contents are not."""
+    listing = subprocess.run(
+        ["git", "ls-files", "data"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    assert sorted(listing) == ["data/processed/.gitkeep", "data/raw/.gitkeep"], listing
+
+
+def test_embedded_figures_exist():
+    """Every image the README displays resolves, not just the ones named in backticks."""
+    for path in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", README):
+        if path.startswith("http"):
+            continue  # the DOI and licence badges are served by Zenodo and shields.io
+        assert (ROOT / path).exists(), f"README embeds a missing image: {path}"

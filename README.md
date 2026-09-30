@@ -47,7 +47,7 @@ flowchart TB
     class POOLED pooled
     class TWB external
     class MET omics
-    style COHORTS fill:none,stroke:none
+    style COHORTS fill:none,stroke:#999999,stroke-width:1px,stroke-dasharray: 5 4
 ```
 
 The same figure is available as TikZ in [`output/study_design.tex`](output/study_design.tex) for the
@@ -76,6 +76,13 @@ computed on it. It is used to ask whether the model's predictions behave like re
 Reducing 241 engineered features to the twenty most influential costs nothing measurable, which is the
 practical result: the deployable model needs twenty inputs.
 
+![SHAP summary plot of the twenty highest-ranked features](output/SHAP_summary_plot_new_color_blind.png)
+
+*What the model relies on. Each point is one of the 8,040 test-set participants, positioned by how
+much that feature pushed their prediction and coloured by the feature's value. Liver enzymes rank
+among the strongest predictors, which is the finding that ties insulin resistance to fatty liver
+disease.*
+
 **Uncertainty.** Resampling the 8,040-participant test set 1,000 times with replacement puts a 95%
 interval around each figure above. For the deployed twenty-feature model: AUC 0.880 (0.872–0.887),
 sensitivity 0.785 (0.769–0.799), NPV 0.874 (0.864–0.882). Every model's AUC interval overlaps every
@@ -92,6 +99,12 @@ and that inflates the probabilities. Two consequences are worth stating plainly.
 specificity and NPV above are empirical counts at a 0.5 threshold and are unaffected by it. But the
 raw predicted probability should not be read as an absolute risk without recalibration. Taiwan
 Biobank carries no observed label, so no calibration can be computed there.
+
+![Calibration curves for the 241-feature and top-20 CatBoost models](output/Calibration_CatBoost.png)
+
+*Ranks well, scores too high. Each point is a decile of predicted probability plotted against how
+often those participants were actually insulin resistant; a perfectly calibrated model sits on the
+diagonal. Both models track it in shape but sit consistently below it.*
 
 **Cross-cohort transfer.** Each of the four classifiers is scored on the whole cohort it never saw,
 in both directions, so that the direction of transfer is not confounded with the choice of
@@ -123,22 +136,35 @@ manifest's `SNP_ID`, `SNP_DISTANCE` and `SNP_MINORALLELEFREQUENCY` columns are c
 and published cross-reactive probe lists are not consulted. These 22 probes are therefore
 hypothesis-generating candidates for follow-up, not a filtered final set.
 
+![Volcano plot of 332,284 CpG sites tested between the predicted groups](output/volcano_plot_of_DNA_methylation_analysis_color_blind.png)
+
+*All 332,284 tested probes at once. Effect size runs left to right, confidence bottom to top, and the
+dashed lines mark the two thresholds a probe must pass. The 22 that pass both are the highlighted
+points.*
+
 ## Repository layout
 
 ```
-configs/      Tuned hyperparameters, cohort file inventory, probe annotation, paths
-data/
-  raw/        Raw cohort files (not distributed — see Data availability)
-  processed/  Intermediate tables (not distributed)
-output/       Result tables and figures (committed)
-models/       Final CatBoost models and manifest.csv
-notebooks/    01–08, one per step of the analysis
+configs/          Tuned hyperparameters, cohort file inventory, probe annotation, paths
+data/             Only the directories are tracked; their contents never are
+  raw/            Raw cohort files, placed here by you (see Data availability)
+  processed/      Intermediate tables written by notebook 01
+output/           Result tables and figures (committed)
+models/           Final CatBoost models and manifest.csv
+notebooks/        01–08, one per step of the analysis
 src/
-  data/       Cohort readers: nhanes.py, knhanes.py, twb.py, io.py
-  features/   Interaction generation and feature selection
-  models/     Training, evaluation, SHAP, regression
-  methylation/Extraction, differential testing, annotation, enrichment
-  viz/        Figures and tables
+  data/           Cohort readers: nhanes.py, knhanes.py, twb.py, io.py
+  features/       Interaction generation and feature selection
+  models/         Training, evaluation, SHAP, regression
+  methylation/    Extraction, differential testing, annotation, enrichment
+  viz/            Figures and tables
+tests/            Unit tests, and a check that this README matches the outputs
+run_all.sh        Runs the notebooks in dependency order
+requirements.txt  Pinned dependencies
+environment.yml   The conda environment the results were produced in
+CITATION.cff      Machine-readable citation metadata, read by Zenodo
+README.md         This file
+LICENSE           MIT, for the code only
 ```
 
 ## Setup
@@ -207,7 +233,8 @@ IR− from IR+ with blue and orange. In every pair the data, axes and ordering a
 
 `Calibration_CatBoost.png` is drawn from the same palette from the start — blue and orange, with the
 diagonal in neutral grey and the two models additionally separated by marker shape — so it needs no
-sibling either.
+sibling either. The three figures shown above are the colour-blind-safe versions, for the same reason
+the siblings exist at all.
 
 **Panel labels.** The two halves of the discrimination figure are written as separate files, so
 `ROC_PR_CatBoost_a.png` and `ConfusionMatrix_CatBoost_b.png` are copies carrying the panel letters

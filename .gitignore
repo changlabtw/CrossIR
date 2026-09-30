@@ -1,6 +1,9 @@
-# Data
-data/raw/
-data/processed/
+# Data. The directories themselves are tracked, so the layout is visible on
+# GitHub; everything placed in them is not.
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 
 # Run logs
 logs/
