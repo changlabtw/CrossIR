@@ -269,8 +269,14 @@ is not recoverable from the exports themselves.
 
 ## Citation
 
-If you use this software or its results, please cite the accompanying paper and this repository. See
-`CITATION.cff` for machine-readable metadata; fill in the DOI once Zenodo has minted it.
+If you use this software or its results, please cite the accompanying paper and this repository.
+`CITATION.cff` carries the metadata in machine-readable form, which GitHub's **Cite this repository**
+button will render as BibTeX or APA.
+
+Every version is archived on Zenodo under
+[10.5281/zenodo.23018637](https://doi.org/10.5281/zenodo.23018637), which always resolves to the most
+recent one. To cite the exact code behind the paper, use the v1.0.0 DOI,
+[10.5281/zenodo.23018638](https://doi.org/10.5281/zenodo.23018638).
 
 ## License
 
